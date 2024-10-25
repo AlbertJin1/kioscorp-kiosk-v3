@@ -3,39 +3,50 @@ import { IoMdCart } from 'react-icons/io';
 import CartModal from './CartModal';
 import LogoImage from '../img/Logo/kioscorp.png';
 
-const Sidebar = ({ cart, isCartOpen, setIsCartOpen, token, setCart, mainCategories, setSelectedMainCategory, setSelectedSubCategory }) => {
+const Sidebar = ({ cart, isCartOpen, setIsCartOpen, token, setCart, mainCategories, setSelectedSubCategory }) => {
     const [subCategories, setSubCategories] = useState([]);
-    const [selectedMainCategory, setSelectedMainCategoryState] = useState(null);
+    const [selectedMainCategory, setSelectedMainCategoryState] = useState(null); // Default is null to show all
     const [selectedSubCategory, setSelectedSubCategoryState] = useState(null);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 6;  // Limit sub-categories per page
+    const itemsPerPage = 5;  // Limit sub-categories per page
 
     useEffect(() => {
         const fetchSubCategories = async () => {
-            if (selectedMainCategory) {
-                const response = await fetch(`http://localhost:8000/api/sub-categories/?main_category=${selectedMainCategory}`, {
-                    headers: { 'Authorization': `Token ${token}` },
-                });
-                const data = await response.json();
-                setSubCategories(data);
-                setCurrentPage(1);  // Reset to the first page when a new category is selected
-            }
+            const response = await fetch(`http://localhost:8000/api/sub-categories/`, {
+                headers: { 'Authorization': `Token ${token}` },
+            });
+            const data = await response.json();
+            setSubCategories(data);
+            setCurrentPage(1);  // Reset to the first page when subcategories are fetched
         };
 
         fetchSubCategories();
-    }, [selectedMainCategory, token]);
+    }, [token]);
+
+    // Call showAllSubCategories on initial render to set default state
+    useEffect(() => {
+        showAllSubCategories();
+    }, []);
 
     const handleMainCategorySelect = (category) => {
-        setSelectedMainCategoryState(category === selectedMainCategory ? null : category);
-        setSelectedSubCategoryState(null);
-        setSelectedSubCategory(null); // Reset selected sub-category
+        // Toggle selection of main category
+        if (category === selectedMainCategory) {
+            setSelectedMainCategoryState(null); // Unselect main category
+            setSelectedSubCategoryState(null); // Reset selected sub-category
+        } else {
+            setSelectedMainCategoryState(category);
+            setSelectedSubCategoryState(null); // Reset selected sub-category when changing main category
+        }
     };
 
     const handleSubCategorySelect = (subCategory) => {
         setSelectedSubCategoryState(subCategory === selectedSubCategory ? null : subCategory);
         setSelectedSubCategory(subCategory);
+        if (selectedMainCategory) {
+            setSelectedMainCategoryState(null); // Unselect main category when a subcategory is selected
+        }
     };
 
     // Pagination Logic
@@ -57,6 +68,12 @@ const Sidebar = ({ cart, isCartOpen, setIsCartOpen, token, setCart, mainCategori
         }
     };
 
+    const showAllSubCategories = () => {
+        setSelectedMainCategoryState(null); // Reset main category selection
+        setSelectedSubCategoryState(null); // Reset sub-category selection
+        setCurrentPage(1); // Reset to the first page
+    };
+
     return (
         <div className={`min-h-screen flex flex-col bg-[#033372] text-white transition-all duration-300 w-72`}>
             {/* Logo Section */}
@@ -65,30 +82,40 @@ const Sidebar = ({ cart, isCartOpen, setIsCartOpen, token, setCart, mainCategori
             </div>
             <hr className="border-gray-300 mt-2" />
 
+            {/* Show All Selection */}
+            <div>
+                <button
+                    className={`w-full p-4 text-left text-lg font-semibold ${selectedMainCategory === null && selectedSubCategory === null ? 'bg-green-600' : 'hover:bg-[#022a5e]'}`}
+                    onClick={showAllSubCategories}
+                >
+                    Show All
+                </button>
+            </div>
+
             {/* Main Categories Filter */}
             <div>
-                <h3 className="text-2xl font-bold px-4 py-2">Main Categories</h3>
+                <h3 className="text-2xl font-bold p-4 text-[#fdcd4b]">Main Categories</h3>
                 {mainCategories.map((category) => (
                     <button
                         key={category.main_category_id}
                         className={`w-full p-4 text-left text-lg font-semibold ${selectedMainCategory === category.main_category_id ? 'bg-[#022a5e]' : 'hover:bg-[#022a5e]'}`}
                         onClick={() => handleMainCategorySelect(category.main_category_id)}
                     >
-                        {category.main_category_name} ({category.product_count})
+                        {category.main_category_name}
                     </button>
                 ))}
             </div>
 
             {/* Sub-Categories Filter */}
             <div>
-                <h3 className="text-2xl font-bold px-4 py-2">Sub-Categories</h3>
+                <h3 className="text-2xl font-bold p-4 text-[#fdcd4b]">Sub-Categories</h3>
                 {currentSubCategories.map((subCategory) => (
                     <button
                         key={subCategory.sub_category_id}
-                        className={`w-full p-4 text-left text-md font-semibold ${selectedSubCategory === subCategory.sub_category_id ? 'bg-[#022a5e]' : 'hover:bg-[#022a5e]'}`}
+                        className={`w-full p-4 text-left text-lg font-semibold ${selectedSubCategory === subCategory.sub_category_id ? 'bg-[#022a5e]' : 'hover:bg-[#022a5e]'}`}
                         onClick={() => handleSubCategorySelect(subCategory.sub_category_id)}
                     >
-                        {subCategory.sub_category_name} ({subCategory.product_count})
+                        {subCategory.sub_category_name}
                     </button>
                 ))}
             </div>
@@ -100,30 +127,19 @@ const Sidebar = ({ cart, isCartOpen, setIsCartOpen, token, setCart, mainCategori
                     <button
                         onClick={prevPage}
                         disabled={currentPage === 1}
-                        className={`p-2 px-4 text-lg font-bold ${currentPage === 1 ? 'bg-gray-400' : 'bg-[#022a5e] hover:bg-blue-700'} text-white rounded`}
+                        className={`p-2 px-4 text-xl font-bold ${currentPage === 1 ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded`}
                     >
                         Prev
                     </button>
-                    <span>{currentPage} / {totalPages}</span>
+                    <span className="font-bold text-xl">{currentPage} / {totalPages}</span>
                     <button
                         onClick={nextPage}
                         disabled={currentPage === totalPages}
-                        className={`p-2 px-4 text-lg font-bold ${currentPage === totalPages ? 'bg-gray-400' : 'bg-[#022a5e] hover:bg-blue-700'} text-white rounded`}
+                        className={`p-2 px-4 text-xl font-bold ${currentPage === totalPages ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded`}
                     >
                         Next
                     </button>
                 </div>
-
-                {/* Clear All Button */}
-                <button
-                    className="w-full p-2 h-20 bg-red-600 text-3xl text-white font-bold rounded hover:bg-red-500 transition duration-300 mb-4"
-                    onClick={() => {
-                        setSelectedMainCategoryState(null);
-                        setSelectedSubCategoryState(null);
-                    }}
-                >
-                    Clear All
-                </button>
 
                 {/* Cart Icon */}
                 <div className="relative cursor-pointer flex items-center space-x-2 p-2 h-20 bg-blue-600 hover:bg-blue-700 rounded transition duration-300" onClick={() => setIsCartOpen(true)}>

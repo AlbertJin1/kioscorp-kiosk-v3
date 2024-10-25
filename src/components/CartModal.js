@@ -1,4 +1,3 @@
-// CartModal.js
 import React, { useState } from 'react';
 import { IoMdRemoveCircleOutline, IoMdAddCircleOutline } from 'react-icons/io';
 import Swal from 'sweetalert2';
@@ -6,6 +5,7 @@ import axios from 'axios';
 
 const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }) => {
     const [isPrinting, setIsPrinting] = useState(false);
+
     const calculateTotal = () => {
         return cart.reduce((total, item) => total + item.product_price * item.quantity, 0);
     };
@@ -30,7 +30,6 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
         setIsPrinting(true);
 
         try {
-            // Your print logic here
             if (cart.length === 0) {
                 Swal.fire({
                     toast: true,
@@ -78,8 +77,16 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                         timerProgressBar: true,
                         backdrop: false,
                     });
-                    setCart([]);  // Clear the cart after successful print
-                    setIsCartOpen(false);  // Close the cart modal
+
+                    const order_id = response.data.order_id; // Retrieve the order_id from the response
+                    console.log('Order ID to navigate with:', order_id); // Debugging line
+
+                    // Clear the cart and close the modal
+                    setCart([]);
+                    setIsCartOpen(false);
+
+                    // Navigate to the Feedback screen with order_id
+                    navigate('/feedback', { state: { order_id } });
                 } else {
                     throw new Error(response.data.message || 'Printing failed');
                 }
@@ -105,7 +112,7 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
         isCartOpen && (
             <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center">
                 <div className="bg-white p-6 rounded-lg shadow-lg w-3/4 h-3/4 flex flex-col text-black">
-                    <h2 className="text-5xl font-bold mb-4">Shopping Cart</h2>
+                    <h2 className="text-5xl font-bold mb-4 ">Shopping Cart</h2>
                     <hr className="border-gray-300 mb-4" />
                     {cart.length === 0 ? (
                         <div className="flex flex-col items-center justify-center flex-grow">
@@ -176,7 +183,7 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                                             onClick={() => handleRemoveFromCart(item.product_id)}
                                             className="text-red-500 hover:text-red-700 w-1/6 flex justify-center text-3xl font-bold"
                                         >
-                                            REMOVE
+                                            <IoMdRemoveCircleOutline className="text-5xl" /> {/* Remove icon */}
                                         </button>
                                     </div>
                                 ))}
