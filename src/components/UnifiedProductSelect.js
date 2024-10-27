@@ -65,8 +65,7 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
     }, [token, selectedMainCategory, selectedSubCategory]);
 
     const filteredProducts = products.filter(product => {
-        const matchesSearchQuery = product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            product.product_brand.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearchQuery = product.product_name.toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesMainCategory = selectedMainCategory
             ? subCategories.some(sub => sub.sub_category_id === product.sub_category && sub.main_category === selectedMainCategory)
@@ -270,7 +269,7 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                         </button>
                     </div>
                 </div>
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-3 gap-4">
                     {currentProducts.length === 0 ? (
                         <p className="col-span-3 text-center font-bold text-xl text-gray-600">No products found.</p>
                     ) : (
@@ -280,7 +279,7 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                                     <img
                                         src={product.product_image ? `http://localhost:8000${product.product_image}` : "https://via.placeholder.com/150"}
                                         alt={product.product_name}
-                                        className="w-auto h-40 object-cover border-2 border-black rounded-md"
+                                        className="w-auto h-48 object-cover border-2 border-black rounded-md"
                                         onError={(e) => {
                                             e.target.onerror = null; // Prevents looping
                                             e.target.src = "https://via.placeholder.com/150"; // Placeholder image
@@ -295,7 +294,7 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                                     </div>
                                     <button
                                         onClick={product.product_quantity > 0 ? () => handleAddToCart(product) : null}
-                                        className={`transition duration-300 ${product.product_quantity === 0 ? 'bg-red-400 text-white cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'} text-3xl font-bold h-14 px-4 rounded mt-2`}
+                                        className={`transition duration-300 ${product.product_quantity === 0 ? 'bg-red-400 text-white cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'} text-2xl font-bold h-14 px-4 rounded mt-2`}
                                         disabled={product.product_quantity === 0} // Disable button if out of stock
                                     >
                                         {product.product_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}

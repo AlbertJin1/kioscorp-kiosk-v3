@@ -102,9 +102,11 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
                         placeholder="Search products..."
                         className="w-full p-4 rounded-lg text-3xl font-bold border border-gray-300 shadow uppercase pr-16"
                     />
-                    <button onClick={clearSearch} className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                        <FaTimes size={40} className="text-gray-500" /> {/* Increased size */}
-                    </button>
+                    {searchTerm && ( // Only show the clear button if there's text in the input
+                        <button onClick={clearSearch} className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                            <FaTimes size={40} className="text-gray-500" /> {/* Increased size */}
+                        </button>
+                    )}
                     {showSuggestions && suggestions.length > 0 && (
                         <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded shadow-lg mt-1 max-h-96 overflow-y-auto">
                             {suggestions.map((suggestion) => (
