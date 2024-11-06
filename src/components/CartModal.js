@@ -1,10 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { IoMdRemoveCircleOutline, IoMdAddCircleOutline } from 'react-icons/io';
+import { FaTimes } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import './CartModal.css';
 
 const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }) => {
-    const [isPrinting, setIsPrinting] = useState(false);
+    const [isPrinting, setIsPrinting] = useState(false); // State to track printing status
+    const modalRef = useRef();
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (modalRef.current && !modalRef.current.contains(event.target)) {
+                setIsCartOpen(false);
+            }
+        };
+
+        document.addEventListener('click', handleClickOutside, true);
+
+        return () => {
+            document.removeEventListener('click', handleClickOutside, true);
+        };
+    }, [modalRef, setIsCartOpen]);
 
     const calculateTotal = () => {
         return cart.reduce((total, item) => total + item.product_price * item.quantity, 0);
@@ -12,22 +29,57 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
 
     const handleUpdateQuantity = (productId, newQuantity) => {
         const existingProduct = cart.find(item => item.product_id === productId);
+
+        // Check if the product exists in the cart
         if (existingProduct) {
-            setCart(prevCart => prevCart.map(item =>
-                item.product_id === productId ? { ...item, quantity: newQuantity } : item
-            ));
+            // Ensure new quantity does not exceed available stock
+            if (newQuantity <= 0) {
+                handleRemoveFromCart(productId);
+            } else if (newQuantity > existingProduct.product_quantity) {
+                Swal.fire({
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Cannot exceed available stock',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    backdrop: false
+                });
+            } else {
+                setCart(prevCart => prevCart.map(item =>
+                    item.product_id === productId ? { ...item, quantity: newQuantity } : item
+                ));
+            }
         } else {
-            setCart(prevCart => [...prevCart, { product_id: productId, quantity: newQuantity }]);
+            // If the product is not in the cart, add it with the specified quantity
+            if (newQuantity > 0) {
+                setCart(prevCart => [...prevCart, { product_id: productId, quantity: newQuantity }]);
+            }
         }
     };
 
     const handleRemoveFromCart = (productId) => {
-        setCart(prevCart => prevCart.filter(item => item.product_id !== productId));
+        setCart(prevCart => {
+            const updatedCart = prevCart.filter(item => item.product_id !== productId);
+
+            // Show SweetAlert2 notification after removing the item
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Product removed from cart.',
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true,
+                backdrop: false,
+            });
+
+            return updatedCart;
+        });
     };
 
     const handlePrint = async () => {
-        if (isPrinting) return;
-        setIsPrinting(true);
+        if (isPrinting) return; // Prevent further execution if already printing
+        setIsPrinting(true); // Set printing state to true
 
         try {
             if (cart.length === 0) {
@@ -58,6 +110,20 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                 total: calculateTotal()
             };
 
+            // Show processing modal
+            const loadingAlert = Swal.fire({
+                title: 'Processing...',
+                text: 'Please wait while we print your receipt.',
+                allowEscapeKey: false,
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Introduce a 2-second delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
             try {
                 const response = await axios.post('http://localhost:8000/api/print-receipt/', printData, {
                     headers: {
@@ -65,6 +131,8 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                         'Content-Type': 'application/json'
                     }
                 });
+
+                loadingAlert.close(); // Close loading modal
 
                 if (response.data.success) {
                     Swal.fire({
@@ -104,14 +172,14 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                 });
             }
         } finally {
-            setIsPrinting(false);
+            setIsPrinting(false); // Reset printing state
         }
     };
 
     return (
         isCartOpen && (
-            <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center">
-                <div className="bg-white p-6 rounded-lg shadow-lg w-3/4 h-3/4 flex flex-col text-black">
+            <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50">
+                <div ref={modalRef} className="bg-white p-6 rounded-lg shadow-lg w-3/4 h-3/4 flex flex-col text-black">
                     <h2 className="text-5xl font-bold mb-4 ">Shopping Cart</h2>
                     <hr className="border-gray-300 mb-4" />
                     {cart.length === 0 ? (
@@ -119,8 +187,9 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                             <p className="text-2xl text-gray-500 mb-4">Your cart is empty.</p>
                             <button
                                 onClick={() => setIsCartOpen(false)}
-                                className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg text-3xl font-bold hover:bg-gray-400 transition duration-300"
+                                className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg text-5xl font-bold hover:bg-gray-400 transition duration-300 flex items-center"
                             >
+                                <FaTimes className="mr-2" size={50} />
                                 CLOSE
                             </button>
                         </div>
@@ -129,62 +198,58 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                             <div className="flex justify-between mb-4 text-4xl font-bold text-gray-600">
                                 <span className="w-1/6 text-center">Image</span>
                                 <span className="w-1/3">Product Name</span>
-                                <span className="w-1/4 text-center">Quantity</span>
-                                <span className="w-1/4 text-center">Price</span>
-                                <span className="w-1/6 text-center">Action</span>
+                                <span className="w-1/3 text-center">Quantity</span>
+                                <span className="w-1/4 text-right mr-10">Price</span>
                             </div>
-                            <hr className="border-gray-300 mb-4" />
-                            <div className="flex flex-col flex-grow overflow-y-auto">
+                            <hr className="border-gray-300" />
+                            <div className="flex flex-col flex-grow overflow-y-auto cart-modal-scrollbar">
                                 {cart.map((item, index) => (
-                                    <div key={index} className="flex justify-between items-center mb-4">
-                                        <div className="w-1/6 flex justify-center">
-                                            <img
-                                                src={item.product_image
-                                                    ? `http://localhost:8000${item.product_image}`
-                                                    : "https://via.placeholder.com/150"
-                                                }
-                                                alt={item.product_name}
-                                                className="h-20 w-20 object-cover rounded"
-                                                onError={(e) => {
-                                                    e.target.onerror = null; // prevents looping
-                                                    e.target.src = "https://via.placeholder.com/150";
-                                                }}
-                                            />
-                                        </div>
-                                        <span className="text-3xl font-bold w-1/3">{item.product_name}</span>
-                                        <div className="flex items-center justify-center w-1/4">
-                                            <button onClick={() => handleUpdateQuantity(item.product_id, item.quantity - 1)}>
-                                                <IoMdRemoveCircleOutline className="text-5xl text-blue-500 hover:text-blue-700" />
-                                            </button>
-                                            <input
-                                                type="number"
-                                                value={item.quantity}
-                                                onInput={(e) => {
-                                                    const newQuantity = e.target.value;
-                                                    if (newQuantity === '') {
-                                                        return;
+                                    <div key={index}>
+                                        <div className="flex justify-between items-center my-4">
+                                            <div className="w-1/6 flex justify-center">
+                                                <img
+                                                    src={item.product_image
+                                                        ? `http://localhost:8000${item.product_image}`
+                                                        : "https://via.placeholder.com/150"
                                                     }
-                                                    const parsedQuantity = parseInt(newQuantity);
-                                                    if (isNaN(parsedQuantity) || parsedQuantity < 1) {
-                                                        e.target.value = item.quantity;
-                                                        return;
-                                                    }
-                                                    handleUpdateQuantity(item.product_id, parsedQuantity);
-                                                }}
-                                                min="1"
-                                                className="w-16 font-bold text-2xl text-center border-2 border-gray-300 rounded p-2 mx-2 focus:outline-none focus:border-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                            />
-                                            <button onClick={() => handleUpdateQuantity(item.product_id, item.quantity + 1)}>
-                                                <IoMdAddCircleOutline className="text-5xl text-blue-500 hover:text-blue-700" />
-                                            </button>
+                                                    alt={item.product_name}
+                                                    className="h-20 w-20 object-cover rounded"
+                                                    onError={(e) => {
+                                                        e.target.onerror = null; // prevents looping
+                                                        e.target.src = "https://via.placeholder.com/150";
+                                                    }}
+                                                />
+                                            </div>
+                                            <span className="text-3xl font-bold w-1/3">{item.product_name}</span>
+                                            <div className="flex items-center justify-center w-1/3">
+                                                <button onClick={() => handleUpdateQuantity(item.product_id, item.quantity - 1)}>
+                                                    <IoMdRemoveCircleOutline className="text-5xl text-red-500 hover:text-red-700" />
+                                                </button>
+                                                <input
+                                                    type="number"
+                                                    value={item.quantity}
+                                                    onInput={(e) => {
+                                                        const newQuantity = e.target.value;
+                                                        if (newQuantity === '') {
+                                                            return;
+                                                        }
+                                                        const parsedQuantity = parseInt(newQuantity);
+                                                        if (isNaN(parsedQuantity) || parsedQuantity < 1) {
+                                                            e.target.value = item.quantity;
+                                                            return;
+                                                        }
+                                                        handleUpdateQuantity(item.product_id, parsedQuantity);
+                                                    }}
+                                                    min="1"
+                                                    className="w-16 font-bold text-2xl text-center border-2 border-gray-300 rounded p-2 mx-2 focus:outline-none focus:border-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]: appearance-none [&::-webkit-inner-spin-button ]:appearance-none"
+                                                />
+                                                <button onClick={() => handleUpdateQuantity(item.product_id, item.quantity + 1)}>
+                                                    <IoMdAddCircleOutline className="text-5xl text-green-500 hover:text-green-700" />
+                                                </button>
+                                            </div>
+                                            <span className="text-3xl font-bold w-1/4 text-right mr-4">₱{item.product_price}</span>
                                         </div>
-                                        <span className="text-3xl font-bold w-1/4 text-center">₱{item.product_price}</span>
-                                        <button
-                                            onClick={() => handleRemoveFromCart(item.product_id)}
-                                            className="text-red-500 hover:text-red-700 w-1/6 flex justify-center text-3xl font-bold"
-                                        >
-                                            <IoMdRemoveCircleOutline className="text-5xl" /> {/* Remove icon */}
-                                        </button>
+                                        <hr className="border-gray-300" /> {/* Separator line */}
                                     </div>
                                 ))}
                             </div>
@@ -193,17 +258,18 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                             <div className="flex justify-between items-center mt-4">
                                 <button
                                     onClick={() => setIsCartOpen(false)}
-                                    className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg text-3xl font-bold hover:bg-gray-400 transition duration-300"
+                                    className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg text-4xl font-bold hover:bg-gray-400 transition duration-300"
                                 >
                                     CLOSE
                                 </button>
                                 <div className="flex justify-center items-center">
                                     <span className="text-4xl font-bold mr-4">Total:</span>
-                                    <span className="text-6xl font-bold">₱{calculateTotal()}</span>
+                                    <span className="text-6xl font-bold">₱{calculateTotal().toLocaleString()}</span>
                                 </div>
                                 <button
                                     onClick={handlePrint}
-                                    className="bg-blue-500 text-white px-6 py-3 rounded-lg text-3xl font-bold hover:bg-blue-600 transition duration-300"
+                                    className="bg-blue-500 text-white px-6 py-3 rounded-lg text-4xl font-bold hover:bg-blue-600 transition duration-300"
+                                    disabled={isPrinting} // Disable button while printing
                                 >
                                     PRINT
                                 </button>

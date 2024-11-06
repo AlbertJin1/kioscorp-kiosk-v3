@@ -1,23 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { FaTimes } from 'react-icons/fa'; // Import the clear icon
+import React, { useState, useEffect, useRef } from 'react';
+import { FaTimes } from 'react-icons/fa';
 import axios from 'axios';
 import Fuse from 'fuse.js';
-import CustomSelect from './CustomSelect'; // Import the custom select component
+import CustomSelect from './CustomSelect';
 
-const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products, token }) => {
+const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products, token, inStockOnly, setInStockOnly, inactivityTime }) => {
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const suggestionBoxRef = useRef(null);
 
     useEffect(() => {
         if (products && searchTerm) {
-            const filteredSuggestions = products.filter(product =>
-                product.product_name.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+            const filteredSuggestions = products.filter(product => {
+                const matchesSearchTerm = product.product_name.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesInStock = inStockOnly ? product.product_quantity > 0 : true; // Check stock condition
+                return matchesSearchTerm && matchesInStock;
+            });
             setSuggestions(filteredSuggestions);
         } else {
             setSuggestions([]);
         }
-    }, [searchTerm, products]);
+    }, [searchTerm, products, inStockOnly]); // Add inStockOnly to dependency array
 
     const fetchSuggestions = async (term) => {
         if (!term) {
@@ -35,12 +38,12 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
 
             const fuse = new Fuse(data, {
                 keys: ['product_name'],
-                threshold: 0.6,
+                threshold: 0.4, // Lower threshold for more accurate matches
             });
 
             const result = fuse.search(term);
-            const suggestions = result.map((item) => item.item);
-            setSuggestions(suggestions);
+            const orderedSuggestions = result.map((item) => item.item); // Map results to the item objects
+            setSuggestions(orderedSuggestions); // Set multiple close matches, with the closest at the top
         } catch (error) {
             console.error('Error fetching suggestions:', error);
         }
@@ -49,13 +52,13 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
     const handleSearchChange = (e) => {
         const value = e.target.value;
         setSearchTerm(value);
-        setShowSuggestions(value.length > 0); // Show suggestions if there's input
+        setShowSuggestions(value.length > 0);
         fetchSuggestions(value);
     };
 
     const highlightMatch = (text, term) => {
         if (!term) return text;
-        const parts = text.split(new RegExp(`(${term})`, 'gi')); // Split the text into parts based on the search term
+        const parts = text.split(new RegExp(`(${term})`, 'gi'));
         return parts.map((part, index) =>
             part.toLowerCase() === term.toLowerCase() ? (
                 <span key={index} className="font-bold text-blue-500">{part}</span>
@@ -66,49 +69,84 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
     };
 
     const handleSuggestionClick = (suggestion) => {
-        setSearchTerm(suggestion.product_name); // Set the search term to the selected suggestion
-        setSuggestions([]); // Clear suggestions
-        setShowSuggestions(false); // Hide suggestions after selection
-        // Navigate to the product details page (if needed)
-        // navigate(`/products/${suggestion.product_id}`);
+        setSearchTerm(suggestion.product_name);
+        setSuggestions([]);
+        setShowSuggestions(false);
     };
 
     const clearSearch = () => {
-        setSearchTerm(''); // Clear the search term
-        setSuggestions([]); // Clear suggestions
+        setSearchTerm('');
+        setSuggestions([]);
     };
 
+    const handleClickOutside = (event) => {
+        if (suggestionBoxRef.current && !suggestionBoxRef.current.contains(event.target)) {
+            setShowSuggestions(false);
+        }
+    };
+
+    useEffect(() => {
+        document.addEventListener(' mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
     return (
-        <div className="w-full bg-white p-4 shadow">
+        <div className="w-full bg-white p-4 shadow select-none">
             {/* Row 1: Titles */}
             <div className="flex justify-between mb-2">
-                <h2 className="text-4xl font-bold text-[#033372]"><span className="text-[#FFBD59]">P</span>roducts</h2>
-                <h2 className="text-4xl text-[#033372] font-bold">Universal Auto Supply <span className='text-[#FFBD59]'>and</span> Bolt Center</h2>
+                <div className="flex items-baseline">
+                    <h2 className="text-4xl font-bold text-[#033372]">
+                        <span className="text-[#FFBD59]">P</span>roducts
+                    </h2>
+                    <span className="ml-4 text-2xl font-semibold">Inactivity Timer: {inactivityTime}</span> {/* Displaying the timer */}
+                </div>
+
+
+                <div className="flex items-center">
+                    <h2 className="text-4xl text-[#033372] font-bold">Universal Auto Supply <span className='text-[#FFBD59]'>and</span> Bolt Center</h2>
+                </div>
             </div>
 
-            {/* Row 2: Sort by and Search box */}
+            {/* Row 2: Sort by, In Stock Only checkbox, and Search box */}
             <div className="flex justify-between items-center">
-                <div className="flex items-center">
-                    <label htmlFor="sort" className="mr-2 text-2xl font-semibold">Sort by:</label>
-                    <CustomSelect value={sortOption} onChange={(value) => setSortOption(value)} />
+                <div className="flex items-center gap-x-4">
+                    <div className="flex items-center">
+                        <label htmlFor="sort" className="mr-2 text-2xl font-semibold">Sort by:</label>
+                        <CustomSelect value={sortOption} onChange={(value) => setSortOption(value)} />
+                    </div>
+                    <div className="flex items-center mr-4">
+                        <div
+                            onClick={() => setInStockOnly(!inStockOnly)} // Toggle the state on click
+                            className={`w-24 h-12 flex items-center rounded-full p-1 cursor-pointer transition duration-300 ease-in-out ${inStockOnly ? 'bg-blue-500' : 'bg-gray-300'}`}
+                        >
+                            <div className={`h-10 w-10 flex items-center justify-center bg-white rounded-full shadow transform transition duration-300 ease-in-out ${inStockOnly ? 'translate-x-12' : 'translate-x-0'}`}>
+                                <span className={`text-sm font-semibold ${inStockOnly ? 'text-blue-500' : 'text-gray-500'}`}>
+                                    {inStockOnly ? 'Yes' : 'No'}
+                                </span>
+                            </div>
+                        </div>
+                        <label className="ml-2 text-3xl font-semibold cursor-pointer select-none" onClick={() => setInStockOnly(!inStockOnly)}>In Stock Only</label>
+                    </div>
                 </div>
-                <div className="relative w-1/3">
+
+                <div className="relative w-2/5" ref={suggestionBoxRef}>
                     <input
                         type="text"
                         value={searchTerm}
                         onChange={handleSearchChange}
-                        onFocus={() => setShowSuggestions(searchTerm.length > 0)} // Show suggestions if there's input
-                        onBlur={() => setTimeout(() => setShowSuggestions(false), 100)} // Delay hiding suggestions slightly
+                        onFocus={() => setShowSuggestions(searchTerm.length > 0)}
                         placeholder="Search products..."
                         className="w-full p-4 rounded-lg text-3xl font-bold border border-gray-300 shadow uppercase pr-16"
                     />
-                    {searchTerm && ( // Only show the clear button if there's text in the input
+                    {searchTerm && (
                         <button onClick={clearSearch} className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                            <FaTimes size={40} className="text-gray-500" /> {/* Increased size */}
+                            <FaTimes size={40} className="text-gray-500" />
                         </button>
                     )}
                     {showSuggestions && suggestions.length > 0 && (
-                        <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded shadow-lg mt-1 max-h-96 overflow-y-auto">
+                        <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded shadow-lg mt-2 max-h-96 overflow-y-auto">
                             {suggestions.map((suggestion) => (
                                 <li
                                     key={suggestion.product_id}

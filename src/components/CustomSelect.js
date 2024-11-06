@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaSortAlphaDown, FaSortAlphaUp, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
 
 const CustomSelect = ({ value, onChange }) => {
@@ -10,14 +10,29 @@ const CustomSelect = ({ value, onChange }) => {
     ];
 
     const [isOpen, setIsOpen] = useState(false);
+    const selectRef = useRef(null);
 
     const handleOptionClick = (option) => {
         onChange(option.value);
         setIsOpen(false);
     };
 
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (selectRef.current && !selectRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
     return (
-        <div className="relative">
+        <div className="relative" ref={selectRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="p-2 border border-gray-300 rounded text-4xl font-bold w-full flex items-center justify-between"
@@ -31,7 +46,7 @@ const CustomSelect = ({ value, onChange }) => {
                         <li
                             key={option.value}
                             onClick={() => handleOptionClick(option)}
-                            className="flex items-center p-2 hover:bg-gray-200 cursor-pointer text-4xl"
+                            className="flex items-center p-2 hover:bg-gray-200 cursor-pointer text-4xl font-bold"
                         >
                             <span className="mr-2">{option.icon}</span>
                             {option.label}

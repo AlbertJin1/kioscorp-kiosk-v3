@@ -5,7 +5,7 @@ import CartModal from './CartModal';
 import Swal from 'sweetalert2'; // Import SweetAlert2
 import { useNavigate } from 'react-router-dom';
 
-const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, sortOption, setIsCartOpen }) => {
+const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, sortOption, setIsCartOpen, inStockOnly }) => {
     const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [mainCategories, setMainCategories] = useState([]);
@@ -61,7 +61,16 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
             }
         };
 
+        // Initial fetch on mount
         fetchProducts();
+
+        // Set up interval to refetch products every 15 seconds
+        const intervalId = setInterval(() => {
+            fetchProducts();
+        }, 15000); // 15000 milliseconds = 15 seconds
+
+        // Cleanup function to clear the interval on component unmount
+        return () => clearInterval(intervalId);
     }, [token, selectedMainCategory, selectedSubCategory]);
 
     const filteredProducts = products.filter(product => {
@@ -73,8 +82,34 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
 
         const matchesSubCategory = selectedSubCategory ? product.sub_category === selectedSubCategory : true;
 
-        return matchesSearchQuery && matchesMainCategory && matchesSubCategory;
+        const matchesInStock = inStockOnly ? product.product_quantity > 0 : true; // Check stock condition
+
+        return matchesSearchQuery && matchesMainCategory && matchesSubCategory && matchesInStock;
     });
+
+    // Reset pagination when inStockOnly is toggled
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [inStockOnly]);
+
+    // Reset pagination when the main category changes
+    useEffect(() => {
+        setCurrentPage(1);
+        setCurrentSubCategoryPage(1); // Reset subcategory page only when main category changes
+    }, [selectedMainCategory]);
+
+    // Reset pagination when the subcategory changes
+    useEffect(() => {
+        setCurrentPage(1); // Reset product page when subcategory changes
+    }, [selectedSubCategory]);
+
+    // Add a new useEffect to manage subcategory page changes
+    useEffect(() => {
+        // If the selectedSubCategory is null, reset the subcategory page
+        if (selectedSubCategory === null) {
+            setCurrentSubCategoryPage(1);
+        }
+    }, [selectedSubCategory]);
 
     // Sort the filtered products
     const sortedProducts = [...filteredProducts].sort((a, b) => {
@@ -96,29 +131,40 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
 
     const handleAddToCart = (product) => {
         const existingProduct = cart.find(item => item.product_id === product.product_id);
+        const currentQuantityInCart = existingProduct ? existingProduct.quantity : 0;
+
+        // Check if adding one more would exceed the available stock
+        if (currentQuantityInCart + 1 > product.product_quantity) {
+            Swal.fire({
+                position: 'top-end',
+                icon: 'error',
+                title: 'Cannot add more than available stock',
+                showConfirmButton: false,
+                timer: 1500,
+                backdrop: false
+            });
+            return; // Exit the function if stock limit is reached
+        }
+
+        // If the product is already in the cart, increase the quantity
         if (existingProduct) {
             setCart(prevCart => prevCart.map(item =>
                 item.product_id === product.product_id ? { ...item, quantity: (item.quantity || 1) + 1 } : item
             ));
-            Swal.fire({
-                position: 'top-end',
-                icon: 'success',
-                title: 'Item added to cart',
-                showConfirmButton: false,
-                timer: 1500,
-                backdrop: false
-            });
         } else {
+            // If the product is not in the cart, add it
             setCart(prevCart => [...prevCart, { ...product, quantity: 1 }]);
-            Swal.fire({
-                position: 'top-end',
-                icon: 'success',
-                title: 'Item added to cart',
-                showConfirmButton: false,
-                timer: 1500,
-                backdrop: false
-            });
         }
+
+        // Show success message
+        Swal.fire({
+            position: 'top-end',
+            icon: 'success',
+            title: 'Item added to cart',
+            showConfirmButton: false,
+            timer: 1500,
+            backdrop: false
+        });
     };
 
     // Sort the subCategories alphabetically (A-Z)
@@ -133,8 +179,8 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
     );
 
     return (
-        <div className="flex h-full">
-            <div className="w-1/4 p-4 bg-gray-200 h-full flex flex-col">
+        <div className="flex h-full select-none">
+            <div className="w-1/5 p-4 bg-gray-200 h-full flex flex-col">
                 {/* Add cart icon below subcategories */}
                 <div className="flex flex-col">
                     <div className="relative cursor-pointer flex items-center space-x-2 p-2 h-20 bg-blue-600 hover:bg-blue-700 rounded transition duration-300" onClick={() => setIsCartOpen(true)}>
@@ -216,7 +262,7 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                             </button>
                         </div>
                         <span className="mx-2 text-2xl font-bold text-gray-600">
-                            Page {currentSubCategoryPage} of {Math.ceil(subCategories.length / subCategoriesPerPage)}
+                            {currentSubCategoryPage} / {Math.ceil(subCategories.length / subCategoriesPerPage)}
                         </span>
                     </div>
                 </div>
@@ -246,23 +292,25 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
             </div>
 
             {/* Product Display Section */}
-            <div className="flex-grow pl-4">
+            <div className="flex-grow w-full pl-4">
                 {/* Pagination and product display logic */}
-                <div className="mb-6">
+                <div className="mb-4">
                     <div className="flex items-center justify-between text-2xl font-bold">
                         <button
                             onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1}
-                            className={`flex items-center px-4 py-2 rounded transition text-4xl duration-300 ${currentPage === 1 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
+                            disabled={currentPage === 1 || totalPages === 0}
+                            className={`flex items-center px-4 py-2 rounded transition text-4xl duration-300 ${currentPage === 1 || totalPages === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
                         >
                             <FaChevronLeft size={50} />
                             Prev
                         </button>
-                        <span className="text-gray-600 text-4xl">{`Page ${currentPage} of ${totalPages}`}</span>
+                        <span className="text-gray-600 text-4xl">
+                            {totalPages > 0 ? `Page ${currentPage} of ${totalPages}` : 'Page 0 of 0'}
+                        </span>
                         <button
                             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage === totalPages}
-                            className={`flex items-center px-4 py-2 rounded transition text-4xl duration-300 ${currentPage === totalPages ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            className={`flex items-center px-4 py-2 rounded transition text-4xl duration-300 ${currentPage === totalPages || totalPages === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
                         >
                             Next
                             <FaChevronRight size={50} />
@@ -271,35 +319,57 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                     {currentProducts.length === 0 ? (
-                        <p className="col-span-3 text-center font-bold text-xl text-gray-600">No products found.</p>
+                        <p className="col-span-3 text-center font-bold text-4xl text-red-500">No products found.</p>
                     ) : (
                         currentProducts.map((product) => (
-                            <div key={product.product_id} className="flex p-6 bg-white shadow-md text-center rounded-lg">
-                                <div className="flex-shrink-0">
-                                    <img
-                                        src={product.product_image ? `http://localhost:8000${product.product_image}` : "https://via.placeholder.com/150"}
-                                        alt={product.product_name}
-                                        className="w-auto h-48 object-cover border-2 border-black rounded-md"
-                                        onError={(e) => {
-                                            e.target.onerror = null; // Prevents looping
-                                            e.target.src = "https://via.placeholder.com/150"; // Placeholder image
-                                        }}
-                                    />
-                                </div>
-                                <div className="flex-grow flex flex-col justify-between ml-6">
-                                    <div>
-                                        <h3 className="text-2xl font-bold">{product.product_name}</h3>
-                                        <p className="text-gray-600 text-lg">{product.product_type}</p>
-                                        <p className="text-2xl font-bold">₱{product.product_price}</p>
+                            <div key={product.product_id} className={`flex p-6 shadow-md text-center rounded-lg relative
+                                ${product.product_quantity === 0 ? 'bg-gray-300 border-2 border-red-500' :
+                                    cart.some(item => item.product_id === product.product_id) ? 'bg-green-100 border-2 border-green-500' : 'bg-white'}`}>
+
+                                {/* Flex container for image and details */}
+                                <div className="flex flex-row w-full">
+                                    <div className="flex-shrink-0 relative">
+                                        {/* Overlay for "In Cart" message */}
+                                        {cart.some(item => item.product_id === product.product_id) && (
+                                            <div className="absolute top-2 left-2 bg-green-500 text-white rounded-full px-2 py-1 text-md font-bold">
+                                                In Cart
+                                            </div>
+                                        )}
+                                        <img
+                                            src={product.product_image ? `http://localhost:8000${product.product_image}` : "https://via.placeholder.com/150"}
+                                            alt={product.product_name}
+                                            className="w-auto h-52 object-cover border-2 border-black rounded-md"
+                                            onError={(e) => {
+                                                e.target.onerror = null; // Prevents looping
+                                                e.target.src = "https://via.placeholder.com/150"; // Placeholder image
+                                            }}
+                                        />
                                     </div>
-                                    <button
-                                        onClick={product.product_quantity > 0 ? () => handleAddToCart(product) : null}
-                                        className={`transition duration-300 ${product.product_quantity === 0 ? 'bg-red-400 text-white cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'} text-2xl font-bold h-14 px-4 rounded mt-2`}
-                                        disabled={product.product_quantity === 0} // Disable button if out of stock
-                                    >
-                                        {product.product_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
-                                    </button>
+                                    <div className="flex-grow flex flex-col justify-between ml-6">
+                                        <div>
+                                            <h3 className={`text-2xl font-bold ${product.product_quantity === 0 ? 'text-gray-500' : 'text-black'}`}>{product.product_name}</h3>
+                                            <p className={`font-semibold text-xl ${product.product_quantity === 0 ? 'text-gray-400' : 'text-gray-600'}`}>{product.product_type}</p>
+                                        </div>
+                                        <div>
+                                            <p className={`text-2xl font-bold ${product.product_quantity === 0 ? 'text-gray-500' : 'text-black'}`}>₱{product.product_price}</p>
+
+                                            <button
+                                                onClick={product.product_quantity > 0 ? () => handleAddToCart(product) : null}
+                                                className={`w-full transition duration-300 ${product.product_quantity === 0 ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'} text-2xl font-bold h-14 px-4 rounded mt-2`}
+                                                disabled={product.product_quantity === 0} // Disable button if out of stock
+                                            >
+                                                {product.product_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
+
+                                {/* Overlay for "Out of Stock" message */}
+                                {product.product_quantity === 0 && (
+                                    <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center text-white font-bold text-2xl rounded-md">
+                                        <span className="text-red-500">Out of Stock</span>
+                                    </div>
+                                )}
                             </div>
                         ))
                     )}
