@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom'; // Use useNavigate instead of useHistory
+import { useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -8,15 +8,23 @@ import BackgroundImage from '../img/Background/background.png';
 
 const Feedback = () => {
     const location = useLocation();
-    const navigate = useNavigate(); // Initialize useNavigate
-    const { order_id } = location.state || {}; // Retrieve order_id from state
-    console.log('Received order_id:', order_id); // Debugging line
+    const navigate = useNavigate();
+    const { order_id } = location.state || {};
+    console.log('Received order_id:', order_id);
 
-    const [rating, setRating] = useState(0); // Set the rating to 0 by default
-    const [isSubmitting, setIsSubmitting] = useState(false); // Track submission state
+    const [rating, setRating] = useState(0);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const getSatisfactionLabel = (rating) => {
+        if (rating === 1) return 'Not Satisfied';
+        if (rating === 2) return 'Slightly Satisfied';
+        if (rating === 3) return 'Neutral';
+        if (rating === 4) return 'Satisfied';
+        if (rating === 5) return 'Very Satisfied';
+        return '';
+    };
 
     const handleSubmit = useCallback(async (rating) => {
-        // Validate input before sending
         if (!order_id) {
             Swal.fire({
                 icon: 'error',
@@ -25,35 +33,24 @@ const Feedback = () => {
                 timer: 2000,
                 showConfirmButton: false
             });
-            return; // Exit early if validation fails
+            return;
         }
 
-        // Prevent multiple submissions
         if (isSubmitting) return;
 
-        setIsSubmitting(true); // Set submitting state to true
+        setIsSubmitting(true);
 
-        // Determine satisfaction based on rating
-        let feedbackSatisfaction;
-        if (rating >= 4) {
-            feedbackSatisfaction = 'Satisfied';
-        } else if (rating >= 2) {
-            feedbackSatisfaction = 'Neutral';
-        } else {
-            feedbackSatisfaction = 'Not Satisfied';
-        }
+        const feedbackSatisfaction = getSatisfactionLabel(rating);
 
-        // Prepare feedback data
         const feedbackData = {
-            order_id: order_id, // Ensure this is the correct order ID
+            order_id: order_id,
             feedback_rating: rating,
             feedback_satisfaction: feedbackSatisfaction
         };
 
-        // Send the feedback to the server
         try {
             const response = await axios.post('http://localhost:8000/api/feedback/', feedbackData);
-            if (response.status === 201) { // Check for successful creation
+            if (response.status === 201) {
                 Swal.fire({
                     icon: 'success',
                     title: 'Thank you for your feedback!',
@@ -61,7 +58,7 @@ const Feedback = () => {
                     timer: 2000,
                     showConfirmButton: false
                 }).then(() => {
-                    navigate('/'); // Redirect to home page after success
+                    navigate('/');
                 });
             } else {
                 Swal.fire({
@@ -73,7 +70,7 @@ const Feedback = () => {
                 });
             }
         } catch (error) {
-            console.error('Error submitting feedback:', error.response.data); // Log the specific error response
+            console.error('Error submitting feedback:', error.response.data);
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
@@ -82,24 +79,23 @@ const Feedback = () => {
                 showConfirmButton: false
             });
         } finally {
-            setIsSubmitting(false); // Reset submitting state
+            setIsSubmitting(false);
         }
-    }, [order_id, isSubmitting, navigate]); // Include dependencies
+    }, [order_id, isSubmitting, navigate]);
 
     useEffect(() => {
-        // Set a timer to automatically submit a rating of 5 after 20 seconds
         const timer = setTimeout(() => {
-            if (rating === 0) { // Only submit if no rating has been given
-                handleSubmit(5); // Automatically submit a rating of 5
+            if (rating === 0) {
+                handleSubmit(3); // Automatically submit a rating of 3 (Neutral)
             }
         }, 20000); // 20 seconds
 
-        return () => clearTimeout(timer); // Cleanup the timer on unmount
-    }, [rating, handleSubmit]); // Include handleSubmit in the dependency array
+        return () => clearTimeout(timer);
+    }, [rating, handleSubmit]);
 
     const handleRatingChange = (rating) => {
         setRating(rating);
-        handleSubmit(rating); // Automatically submit when a star is clicked
+        handleSubmit(rating);
     };
 
     return (
