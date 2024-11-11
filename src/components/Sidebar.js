@@ -14,7 +14,7 @@ const Sidebar = ({ cart, isCartOpen, setIsCartOpen, token, setCart, mainCategori
 
     useEffect(() => {
         const fetchSubCategories = async () => {
-            const response = await fetch(`http://localhost:8000/api/sub-categories/`, {
+            const response = await fetch(`http://192.168.254.101:8000/api/sub-categories/`, {
                 headers: { 'Authorization': `Token ${token}` },
             });
             const data = await response.json();

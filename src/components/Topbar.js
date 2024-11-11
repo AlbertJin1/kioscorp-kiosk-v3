@@ -3,11 +3,14 @@ import { FaTimes } from 'react-icons/fa';
 import axios from 'axios';
 import Fuse from 'fuse.js';
 import CustomSelect from './CustomSelect';
+import OnScreenKeyboard from './OnScreenKeyboard';
 
 const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products, token, inStockOnly, setInStockOnly, inactivityTime }) => {
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [showKeyboard, setShowKeyboard] = useState(false);
     const suggestionBoxRef = useRef(null);
+    const keyboardRef = useRef(null); // Create a ref for the keyboard
 
     useEffect(() => {
         if (products && searchTerm) {
@@ -29,7 +32,7 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
         }
 
         try {
-            const response = await axios.get('http://localhost:8000/api/products/', {
+            const response = await axios.get('http://192.168.254.101:8000/api/products/', {
                 headers: {
                     'Authorization': `Token ${token}`,
                 },
@@ -77,20 +80,37 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
     const clearSearch = () => {
         setSearchTerm('');
         setSuggestions([]);
+        setShowKeyboard(false); // Close the keyboard when clearing the search
     };
 
     const handleClickOutside = (event) => {
-        if (suggestionBoxRef.current && !suggestionBoxRef.current.contains(event.target)) {
+        if (suggestionBoxRef.current && !suggestionBoxRef.current.contains(event.target) &&
+            keyboardRef.current && !keyboardRef.current.contains(event.target)) { // Check if the click is outside both suggestion box and keyboard
             setShowSuggestions(false);
+            setShowKeyboard(false); // Hide keyboard when clicking outside
         }
     };
 
     useEffect(() => {
-        document.addEventListener(' mousedown', handleClickOutside);
+        document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+
+    const handleKeyPress = (key) => {
+        if (key === 'Backspace') {
+            setSearchTerm(prev => prev.slice(0, -1)); // Remove last character
+        } else if (key === 'Space') {
+            setSearchTerm(prev => prev + ' '); // Add space
+        } else {
+            setSearchTerm(prev => prev + key); // Append key to search term
+        }
+
+        // Trigger suggestion fetching when typing with the on-screen keyboard
+        fetchSuggestions(searchTerm);
+        setShowSuggestions(true); // Show suggestions when typing
+    };
 
     return (
         <div className="w-full bg-white p-4 shadow select-none">
@@ -100,10 +120,8 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
                     <h2 className="text-4xl font-bold text-[#033372]">
                         <span className="text-[#FFBD59]">P</span>roducts
                     </h2>
-                    <span className="ml-4 text-2xl font-semibold">Inactivity Timer: {inactivityTime}</span> {/* Displaying the timer */}
+                    <span className="ml-4 text-2xl font-semibold">Inactivity Timer: {inactivityTime}</span>
                 </div>
-
-
                 <div className="flex items-center">
                     <h2 className="text-4xl text-[#033372] font-bold">Universal Auto Supply <span className='text-[#FFBD59]'>and</span> Bolt Center</h2>
                 </div>
@@ -136,7 +154,10 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
                         type="text"
                         value={searchTerm}
                         onChange={handleSearchChange}
-                        onFocus={() => setShowSuggestions(searchTerm.length > 0)}
+                        onFocus={() => {
+                            setShowSuggestions(searchTerm.length > 0);
+                            setShowKeyboard(true); // Show keyboard on focus
+                        }}
                         placeholder="Search products..."
                         className="w-full p-4 rounded-lg text-3xl font-bold border border-gray-300 shadow uppercase pr-16"
                     />
@@ -146,7 +167,7 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
                         </button>
                     )}
                     {showSuggestions && suggestions.length > 0 && (
-                        <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded shadow-lg mt-2 max-h-96 overflow-y-auto">
+                        <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded shadow-lg mt-2 max-h-96 overflow-y-auto custom-scrollbar">
                             {suggestions.map((suggestion) => (
                                 <li
                                     key={suggestion.product_id}
@@ -158,8 +179,14 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
                             ))}
                         </ul>
                     )}
+
                 </div>
             </div>
+            {showKeyboard && (
+                <div ref={keyboardRef}> {/* Attach the ref to the keyboard div */}
+                    <OnScreenKeyboard onKeyPress={handleKeyPress} />
+                </div>
+            )}
         </div>
     );
 };

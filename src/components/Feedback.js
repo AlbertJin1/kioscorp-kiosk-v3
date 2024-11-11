@@ -49,7 +49,7 @@ const Feedback = () => {
         };
 
         try {
-            const response = await axios.post('http://localhost:8000/api/feedback/', feedbackData);
+            const response = await axios.post('http://192.168.254.101:8000/api/feedback/', feedbackData);
             if (response.status === 201) {
                 Swal.fire({
                     icon: 'success',

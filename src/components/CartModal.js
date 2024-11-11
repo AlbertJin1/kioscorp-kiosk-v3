@@ -121,60 +121,57 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                 }
             });
 
-            // Introduce a 2-second delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            try {
-                const response = await axios.post('http://localhost:8000/api/print-receipt/', printData, {
-                    headers: {
-                        'Authorization': `Token ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                loadingAlert.close(); // Close loading modal
-
-                if (response.data.success) {
-                    Swal.fire({
-                        toast: true,
-                        position: 'top-end',
-                        icon: 'success',
-                        title: 'Your receipt has been printed successfully.',
-                        showConfirmButton: false,
-                        timer: 2000,
-                        timerProgressBar: true,
-                        backdrop: false,
-                    });
-
-                    const order_id = response.data.order_id; // Retrieve the order_id from the response
-                    console.log('Order ID to navigate with:', order_id); // Debugging line
-
-                    // Clear the cart and close the modal
-                    setCart([]);
-                    setIsCartOpen(false);
-
-                    // Navigate to the Feedback screen with order_id
-                    navigate('/feedback', { state: { order_id } });
-                } else {
-                    throw new Error(response.data.message || 'Printing failed');
+            // Send the request to the server
+            const response = await axios.post('http://192.168.254.101:8000/api/print-receipt/', printData, {
+                headers: {
+                    'Authorization': `Token ${token}`,
+                    'Content-Type': 'application/json'
                 }
-            } catch (error) {
-                console.error('Error printing receipt:', error);
+            });
+
+            loadingAlert.close(); // Close loading modal
+
+            if (response.data.success) {
                 Swal.fire({
                     toast: true,
                     position: 'top-end',
-                    icon: 'error',
-                    title: 'There was an error printing the receipt. Please try again.',
+                    icon: 'success',
+                    title: 'Your receipt has been printed successfully.',
                     showConfirmButton: false,
-                    timer: 3000,
+                    timer: 2000,
                     timerProgressBar: true,
                     backdrop: false,
                 });
+
+                const order_id = response.data.order_id; // Retrieve the order_id from the response
+                console.log('Order ID to navigate with:', order_id); // Debugging line
+
+                // Clear the cart and close the modal
+                setCart([]);
+                setIsCartOpen(false);
+
+                // Navigate to the Feedback screen with order_id
+                navigate('/feedback', { state: { order_id } });
+            } else {
+                throw new Error(response.data.message || 'Printing failed');
             }
+        } catch (error) {
+            console.error('Error printing receipt:', error);
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: 'There was an error printing the receipt. Please try again.',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                backdrop: false,
+            });
         } finally {
             setIsPrinting(false); // Reset printing state
         }
     };
+
 
     return (
         isCartOpen && (
@@ -209,7 +206,7 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                                             <div className="w-1/6 flex justify-center">
                                                 <img
                                                     src={item.product_image
-                                                        ? `http://localhost:8000${item.product_image}`
+                                                        ? `http://192.168.254.101:8000${item.product_image}`
                                                         : "https://via.placeholder.com/150"
                                                     }
                                                     alt={item.product_name}

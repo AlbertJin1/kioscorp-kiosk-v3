@@ -20,13 +20,13 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const mainCategoriesResponse = await fetch('http://localhost:8000/api/main-categories/', {
+                const mainCategoriesResponse = await fetch('http://192.168.254.101:8000/api/main-categories/', {
                     headers: { 'Authorization': `Token ${token}` },
                 });
                 const mainCategoriesData = await mainCategoriesResponse.json();
                 setMainCategories(mainCategoriesData);
 
-                const subCategoriesResponse = await fetch('http://localhost:8000/api/sub-categories/', {
+                const subCategoriesResponse = await fetch('http://192.168.254.101:8000/api/sub-categories/', {
                     headers: { 'Authorization': `Token ${token}` },
                 });
                 const subCategoriesData = await subCategoriesResponse.json();
@@ -42,7 +42,7 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                let url = 'http://localhost:8000/api/products/';
+                let url = 'http://192.168.254.101:8000/api/products/';
                 const params = new URLSearchParams();
                 if (selectedMainCategory) {
                     params.append('main_category', selectedMainCategory);
@@ -312,7 +312,7 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                                                 </div>
                                             )}
                                             <img
-                                                src={product.product_image ? `http://localhost:8000${product.product_image}` : "https://via.placeholder.com/150"}
+                                                src={product.product_image ? `http://192.168.254.101:8000${product.product_image}` : "https://via.placeholder.com/150"}
                                                 alt={product.product_name}
                                                 className="w-auto h-52 object-cover border-2 border-black rounded-md"
                                                 onError={(e) => {
