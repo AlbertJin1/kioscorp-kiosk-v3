@@ -1,15 +1,15 @@
 import React from 'react';
-import { FaBackspace } from 'react-icons/fa';
+import { FaBackspace, FaTimes } from 'react-icons/fa';
 
 const keys = [
     ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'Backspace'],
     ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
     ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
     ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
-    ['Space'],
+    ['Close', 'Space', 'Close'],
 ];
 
-const OnScreenKeyboard = ({ onKeyPress }) => {
+const OnScreenKeyboard = ({ onKeyPress, onClose }) => {
     return (
         <div className="fixed bottom-0 left-0 right-0 bg-gray-800 py-4 shadow-lg z-50 p-4">
             <div className="max-w-full mx-auto grid gap-3">
@@ -21,10 +21,18 @@ const OnScreenKeyboard = ({ onKeyPress }) => {
                         {row.map((key, index) => (
                             <button
                                 key={index}
-                                onClick={() => onKeyPress(key)}
+                                onClick={() => {
+                                    if (key === 'Close') {
+                                        onClose(); // Call the close handler
+                                    } else {
+                                        onKeyPress(key);
+                                    }
+                                }}
                                 className={`flex items-center p-3 justify-center ${key === 'Space'
                                     ? 'w-1/2 h-auto'
-                                    : 'w-full h-auto'
+                                    : key === 'Close'
+                                        ? 'w-auto h-auto bg-red-500' // Set background color for Close button
+                                        : 'w-full h-auto'
                                     } ${key === 'Backspace'
                                         ? 'bg-red-600'
                                         : key === 'Space'
@@ -34,8 +42,10 @@ const OnScreenKeyboard = ({ onKeyPress }) => {
                             >
                                 {key === 'Backspace' ? (
                                     <FaBackspace className="text-white" />
+                                ) : key === 'Close' ? (
+                                    <FaTimes className="text-white" /> // Use FaTimes icon for Close
                                 ) : (
-                                    key === 'Space' ? 'Space' : key
+                                    key
                                 )}
                             </button>
                         ))}

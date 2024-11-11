@@ -179,12 +179,11 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
                             ))}
                         </ul>
                     )}
-
                 </div>
             </div>
             {showKeyboard && (
                 <div ref={keyboardRef}> {/* Attach the ref to the keyboard div */}
-                    <OnScreenKeyboard onKeyPress={handleKeyPress} />
+                    <OnScreenKeyboard onKeyPress={handleKeyPress} onClose={() => setShowKeyboard(false)} />
                 </div>
             )}
         </div>
