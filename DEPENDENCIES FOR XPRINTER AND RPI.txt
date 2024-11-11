@@ -1,6 +1,9 @@
 sudo apt install python3-pip
 pip3 install python-escpos
 
+NEED!!
+sudo apt-get install nodejs npm
+
 
 I SET SA ANG DATE NGA CURRENT DAPAT THEN KANI:
 sudo -H pip3 install python-escpos --break-system-packages
@@ -10,6 +13,9 @@ ESCPOS DEPENDENCIES:
 sudo apt-get install libusb-1.0-0-dev
 sudo pip3 install pyusb --break-system-packages
 pip install --break-system-packages python-barcode
+
+
+
 
 
 FOR ENVIRONMENT
