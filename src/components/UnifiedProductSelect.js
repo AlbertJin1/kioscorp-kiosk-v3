@@ -87,6 +87,31 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
         return matchesSearchQuery && matchesMainCategory && matchesSubCategory && matchesInStock;
     });
 
+    useEffect(() => {
+        const fetchSubCategories = async () => {
+            try {
+                const response = await fetch('http://192.168.254.101:8000/api/sub-categories/', {
+                    headers: { 'Authorization': `Token ${token}` },
+                });
+                const subCategoriesData = await response.json();
+                setSubCategories(subCategoriesData);
+            } catch (error) {
+                console.error('Error fetching subcategories:', error);
+            }
+        };
+
+        // Initial fetch on mount
+        fetchSubCategories();
+
+        // Set up interval to refetch subcategories every 15 seconds
+        const intervalId = setInterval(() => {
+            fetchSubCategories();
+        }, 15000); // 15000 milliseconds = 15 seconds
+
+        // Cleanup function to clear the interval on component unmount
+        return () => clearInterval(intervalId);
+    }, [token]);
+
     // Reset pagination when inStockOnly is toggled
     useEffect(() => {
         setCurrentPage(1);
@@ -248,21 +273,21 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                         <div className="flex items-center">
                             <button
                                 onClick={() => setCurrentSubCategoryPage(prev => Math.max(prev - 1, 1))}
-                                disabled={currentSubCategoryPage === 1}
-                                className={`px-4 py-2 rounded-l text-2xl font-bold transition duration-300 ${currentSubCategoryPage === 1 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
+                                disabled={currentSubCategoryPage === 1 || paginatedSubCategories.length === 0}
+                                className={`px-4 py-2 rounded-l text-2xl font-bold transition duration-300 ${currentSubCategoryPage === 1 || paginatedSubCategories.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
                             >
                                 Prev
                             </button>
                             <button
                                 onClick={() => setCurrentSubCategoryPage(prev => Math.min(prev + 1, Math.ceil(subCategories.length / subCategoriesPerPage)))}
-                                disabled={currentSubCategoryPage === Math.ceil(subCategories.length / subCategoriesPerPage)}
-                                className={`px-4 py-2 rounded-r text-2xl font-bold transition duration-300 ${currentSubCategoryPage === Math.ceil(subCategories.length / subCategoriesPerPage) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
+                                disabled={currentSubCategoryPage === Math.ceil(subCategories.length / subCategoriesPerPage) || paginatedSubCategories.length === 0}
+                                className={`px-4 py-2 rounded-r text-2xl font-bold transition duration-300 ${currentSubCategoryPage === Math.ceil(subCategories.length / subCategoriesPerPage) || paginatedSubCategories.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
                             >
                                 Next
                             </button>
                         </div>
                         <span className="mx-2 text-2xl font-bold text-gray-600">
-                            {currentSubCategoryPage} / {Math.ceil(subCategories.length / subCategoriesPerPage)}
+                            {paginatedSubCategories.length === 0 ? '0 / 0' : `${currentSubCategoryPage} / ${Math.ceil(subCategories.length / subCategoriesPerPage)}`}
                         </span>
                     </div>
                 </div>
