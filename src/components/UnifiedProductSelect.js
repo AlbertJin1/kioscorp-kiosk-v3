@@ -179,8 +179,8 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
     );
 
     return (
-        <div className="flex h-full select-none">
-            <div className="w-1/5 p-4 bg-gray-200 h-full flex flex-col">
+        <div className="flex flex-row flex-grow h-full select-none">
+            <div className="w-1/5 p-4 bg-gray-200 rounded-lg h-full flex flex-col">
                 {/* Add cart icon below subcategories */}
                 <div className="flex flex-col">
                     <div className="relative cursor-pointer flex items-center space-x-2 p-2 h-20 bg-blue-600 hover:bg-blue-700 rounded transition duration-300" onClick={() => setIsCartOpen(true)}>
@@ -291,10 +291,68 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                 </div>
             </div>
 
-            {/* Product Display Section */}
-            <div className="flex-grow w-full pl-4">
+            <div className="flex flex-col h-full flex-grow w-1/2 pl-4">
+                <div className="flex-grow"> {/* This div will allow the product list to grow */}
+                    <div className="grid grid-cols-3 gap-6">
+                        {currentProducts.length === 0 ? (
+                            <p className="col-span-3 text-center font-bold text-4xl text-red-500">No products found.</p>
+                        ) : (
+                            currentProducts.map((product) => (
+                                <div key={product.product_id} className={`flex p-6 shadow-md text-center rounded-lg relative
+                        ${product.product_quantity === 0 ? 'bg-gray-300 border-2 border-red-500' :
+                                        cart.some(item => item.product_id === product.product_id) ? 'bg-green-100 border-2 border-green-500' : 'bg-white'}`}>
+
+                                    {/* Flex container for image and details */}
+                                    <div className="flex min-h-full flex-grow flex-row w-full">
+                                        <div className="flex-shrink-0 relative">
+                                            {/* Overlay for "In Cart" message */}
+                                            {cart.some(item => item.product_id === product.product_id) && (
+                                                <div className="absolute top-2 left-2 bg-green-500 text-white rounded-full px-2 py-1 text-md font-bold">
+                                                    In Cart
+                                                </div>
+                                            )}
+                                            <img
+                                                src={product.product_image ? `http://localhost:8000${product.product_image}` : "https://via.placeholder.com/150"}
+                                                alt={product.product_name}
+                                                className="w-auto h-52 object-cover border-2 border-black rounded-md"
+                                                onError={(e) => {
+                                                    e.target.onerror = null; // Prevents looping
+                                                    e.target.src = "https://via.placeholder.com/150"; // Placeholder image
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="flex-grow flex flex-col justify-between ml-6">
+                                            <div>
+                                                <h3 className={`text-2xl font-bold ${product.product_quantity === 0 ? 'text-gray-500' : 'text-black'}`}>{product.product_name}</h3>
+                                                <p className={`font-semibold text-xl ${product.product_quantity === 0 ? 'text-gray-400' : 'text-gray-600'}`}>{product.product_type}</p>
+                                            </div>
+                                            <div>
+                                                <p className={`text-2xl font-bold ${product.product_quantity === 0 ? 'text-gray-500' : 'text-black'}`}>₱{product.product_price}</p>
+
+                                                <button
+                                                    onClick={product.product_quantity > 0 ? () => handleAddToCart(product) : null}
+                                                    className={`w-full transition duration-300 ${product.product_quantity === 0 ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'} text-2xl font-bold h-14 px-4 rounded mt-2`}
+                                                    disabled={product.product_quantity === 0} // Disable button if out of stock
+                                                >
+                                                    {product.product_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Overlay for "Out of Stock" message */}
+                                    {product.product_quantity === 0 && (
+                                        <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center text-white font-bold text-2xl rounded-md">
+                                            <span className="text-red-500">Out of Stock</span>
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
                 {/* Pagination and product display logic */}
-                <div className="mb-4">
+                <div className="mt-4">
                     <div className="flex items-center justify-between text-2xl font-bold">
                         <button
                             onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -304,9 +362,25 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                             <FaChevronLeft size={50} />
                             Prev
                         </button>
-                        <span className="text-gray-600 text-4xl">
-                            {totalPages > 0 ? `Page ${currentPage} of ${totalPages}` : 'Page 0 of 0'}
-                        </span>
+
+                        {/* Selectable Page Number Buttons */}
+                        <div className="flex justify-center ml-4">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+                                const pageNum = Math.max(1, currentPage - 2) + index; // Start from currentPage - 2
+                                if (pageNum > totalPages) return null; // Avoid rendering pages beyond totalPages
+
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={`mx-2 px-4 py-2 rounded transition duration-300 ${currentPage === pageNum ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-blue-500 hover:text-white'}`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
                         <button
                             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                             disabled={currentPage === totalPages || totalPages === 0}
@@ -316,63 +390,6 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                             <FaChevronRight size={50} />
                         </button>
                     </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                    {currentProducts.length === 0 ? (
-                        <p className="col-span-3 text-center font-bold text-4xl text-red-500">No products found.</p>
-                    ) : (
-                        currentProducts.map((product) => (
-                            <div key={product.product_id} className={`flex p-6 shadow-md text-center rounded-lg relative
-                                ${product.product_quantity === 0 ? 'bg-gray-300 border-2 border-red-500' :
-                                    cart.some(item => item.product_id === product.product_id) ? 'bg-green-100 border-2 border-green-500' : 'bg-white'}`}>
-
-                                {/* Flex container for image and details */}
-                                <div className="flex flex-row w-full">
-                                    <div className="flex-shrink-0 relative">
-                                        {/* Overlay for "In Cart" message */}
-                                        {cart.some(item => item.product_id === product.product_id) && (
-                                            <div className="absolute top-2 left-2 bg-green-500 text-white rounded-full px-2 py-1 text-md font-bold">
-                                                In Cart
-                                            </div>
-                                        )}
-                                        <img
-                                            src={product.product_image ? `http://localhost:8000${product.product_image}` : "https://via.placeholder.com/150"}
-                                            alt={product.product_name}
-                                            className="w-auto h-52 object-cover border-2 border-black rounded-md"
-                                            onError={(e) => {
-                                                e.target.onerror = null; // Prevents looping
-                                                e.target.src = "https://via.placeholder.com/150"; // Placeholder image
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="flex-grow flex flex-col justify-between ml-6">
-                                        <div>
-                                            <h3 className={`text-2xl font-bold ${product.product_quantity === 0 ? 'text-gray-500' : 'text-black'}`}>{product.product_name}</h3>
-                                            <p className={`font-semibold text-xl ${product.product_quantity === 0 ? 'text-gray-400' : 'text-gray-600'}`}>{product.product_type}</p>
-                                        </div>
-                                        <div>
-                                            <p className={`text-2xl font-bold ${product.product_quantity === 0 ? 'text-gray-500' : 'text-black'}`}>₱{product.product_price}</p>
-
-                                            <button
-                                                onClick={product.product_quantity > 0 ? () => handleAddToCart(product) : null}
-                                                className={`w-full transition duration-300 ${product.product_quantity === 0 ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'} text-2xl font-bold h-14 px-4 rounded mt-2`}
-                                                disabled={product.product_quantity === 0} // Disable button if out of stock
-                                            >
-                                                {product.product_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Overlay for "Out of Stock" message */}
-                                {product.product_quantity === 0 && (
-                                    <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center text-white font-bold text-2xl rounded-md">
-                                        <span className="text-red-500">Out of Stock</span>
-                                    </div>
-                                )}
-                            </div>
-                        ))
-                    )}
                 </div>
             </div>
         </div>
