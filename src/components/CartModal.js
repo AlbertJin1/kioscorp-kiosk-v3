@@ -217,7 +217,10 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                                                     }}
                                                 />
                                             </div>
-                                            <span className="text-3xl font-bold w-1/3">{item.product_name}</span>
+                                            <div className="w-1/3 flex flex-col">
+                                                <span className="text-3xl font-bold">{item.product_name}</span>
+                                                <span className="text-xl text-gray-600 font-bold">{item.product_color} ({item.product_size})</span>
+                                            </div>
                                             <div className="flex items-center justify-center w-1/3">
                                                 <button onClick={() => handleUpdateQuantity(item.product_id, item.quantity - 1)}>
                                                     <IoMdRemoveCircleOutline className="text-5xl text-red-500 hover:text-red-700" />

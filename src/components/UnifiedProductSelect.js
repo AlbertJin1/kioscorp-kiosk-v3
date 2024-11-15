@@ -339,7 +339,7 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                                             <img
                                                 src={product.product_image ? `http://192.168.254.101:8000${product.product_image}` : "https://via.placeholder.com/150"}
                                                 alt={product.product_name}
-                                                className="w-auto h-52 object-cover border-2 border-black rounded-md"
+                                                className="w-52 h-52 object-cover border-2 border-black rounded-md"
                                                 onError={(e) => {
                                                     e.target.onerror = null; // Prevents looping
                                                     e.target.src = "https://via.placeholder.com/150"; // Placeholder image
@@ -349,7 +349,8 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                                         <div className="flex-grow flex flex-col justify-between ml-6">
                                             <div>
                                                 <h3 className={`text-2xl font-bold ${product.product_quantity === 0 ? 'text-gray-500' : 'text-black'}`}>{product.product_name}</h3>
-                                                <p className={`font-semibold text-xl ${product.product_quantity === 0 ? 'text-gray-400' : 'text-gray-600'}`}>{product.product_type}</p>
+                                                <p className={`font-semibold text-xl ${product.product_quantity === 0 ? 'text-gray-400' : 'text-gray-600'}`}>{product.product_color}</p>
+                                                <p className={`font-semibold text-xl ${product.product_quantity === 0 ? 'text-gray-400' : 'text-gray-600'}`}>{product.product_size}</p>
                                             </div>
                                             <div>
                                                 <p className={`text-2xl font-bold ${product.product_quantity === 0 ? 'text-gray-500' : 'text-black'}`}>₱{product.product_price}</p>
