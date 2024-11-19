@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Topbar from './Topbar';
 import UnifiedProductSelect from './UnifiedProductSelect';
@@ -13,6 +13,7 @@ import screensaver3 from '../img/Screensaver/screensaver3.png';
 const MainComponent = () => {
     const [token, setToken] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [backendAvailable, setBackendAvailable] = useState(true);
     const [cart, setCart] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isCartOpen, setIsCartOpen] = useState(false);
@@ -22,8 +23,46 @@ const MainComponent = () => {
     const [backgroundIndex, setBackgroundIndex] = useState(0);
     const [inStockOnly, setInStockOnly] = useState(false);
     const [inactivityTime, setInactivityTime] = useState(90);
-
     const location = useLocation();
+
+    const hasReloaded = useRef(false); // Declare useRef at the top level
+
+    useEffect(() => {
+        let serverWasDown = false; // Track if the server was previously unreachable
+
+        const checkBackendHealth = async () => {
+            try {
+                const response = await fetch('http://192.168.254.101:8000/api/ping/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Backend is not reachable');
+                }
+
+                // Backend is reachable
+                console.log('Backend is reachable');
+                setBackendAvailable(true); // Set backend available
+                if (serverWasDown && !hasReloaded.current) {
+                    hasReloaded.current = true;
+                    serverWasDown = false; // Reset flag
+                    console.log('Reloading page due to backend recovery.');
+                    window.location.reload(); // Reload once on recovery
+                }
+            } catch (error) {
+                console.error('Backend health check failed:', error);
+                serverWasDown = true; // Mark server as down
+                setBackendAvailable(false); // Set backend unavailable
+            }
+        };
+
+        const intervalId = setInterval(checkBackendHealth, 5000); // Check every 5 seconds
+
+        return () => clearInterval(intervalId); // Cleanup interval on unmount
+    }, []);
 
     // Function to reset filters and cart
     const resetFiltersAndCart = () => {
@@ -108,7 +147,7 @@ const MainComponent = () => {
     useEffect(() => {
         if (inactivityTime > 0 && !isScreensaverActive) {
             const intervalId = setInterval(() => {
-                setInactivityTime(prevTime => prevTime - 1);
+                setInactivityTime((prevTime) => prevTime - 1);
             }, 1000);
 
             return () => clearInterval(intervalId);
@@ -133,18 +172,28 @@ const MainComponent = () => {
         );
     }
 
+    if (!backendAvailable) {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen bg-gray-800 text-white select-none">
+                <h1 className="text-3xl font-bold mb-4">Currently Unavailable</h1>
+                <p className="text-lg">We are experiencing technical difficulties. Please try again later.</p>
+            </div>
+        );
+    }
+
     return (
         <div
             className={`flex h-screen ${isScreensaverActive ? 'screensaver' : ''}`}
             style={{
-                backgroundImage: isScreensaverActive ? `url(${[screensaver1, screensaver2, screensaver3][backgroundIndex]})` : 'none',
+                backgroundImage: isScreensaverActive
+                    ? `url(${[screensaver1, screensaver2, screensaver3][backgroundIndex]})`
+                    : 'none',
                 backgroundSize: 'cover',
                 transition: 'background-image 1s ease-in-out',
             }}
         >
             {isScreensaverActive ? (
-                <div className="flex justify-center items-center h-screen">
-                </div>
+                <div className="flex justify-center items-center h-screen"></div>
             ) : (
                 <div className={`flex flex-col flex-grow h-screen bg-gray-100`}>
                     {location.pathname !== '/feedback' && (
@@ -162,18 +211,23 @@ const MainComponent = () => {
                     )}
                     <div className={`flex-grow overflow-y-auto ${location.pathname === '/feedback' ? '' : 'p-4'}`}>
                         <Routes>
-                            <Route path="/" element={<UnifiedProductSelect
-                                token={token}
-                                cart={cart}
-                                setCart={setCart}
-                                setIsCartOpen={setIsCartOpen}
-                                searchQuery={searchQuery}
-                                sortOption={sortOption}
-                                isCartOpen={isCartOpen}
-                                products={products}
-                                setProducts={setProducts}
-                                inStockOnly={inStockOnly}
-                            />} />
+                            <Route
+                                path="/"
+                                element={
+                                    <UnifiedProductSelect
+                                        token={token}
+                                        cart={cart}
+                                        setCart={setCart}
+                                        setIsCartOpen={setIsCartOpen}
+                                        searchQuery={searchQuery}
+                                        sortOption={sortOption}
+                                        isCartOpen={isCartOpen}
+                                        products={products}
+                                        setProducts={setProducts}
+                                        inStockOnly={inStockOnly}
+                                    />
+                                }
+                            />
                             <Route path="/feedback" element={<Feedback />} />
                         </Routes>
                     </div>
