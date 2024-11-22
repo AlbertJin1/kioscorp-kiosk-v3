@@ -1,7 +1,12 @@
 {
   "name": "kioscorp-kiosk-v3",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "private": true,
+  "description": "An application for KiosCorp POS",
+  "author": {
+    "name": "KiosCorp",
+    "email": "regualos.jessiealbert@gmail.com"
+  },
   "dependencies": {
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
     "@fortawesome/react-fontawesome": "^0.2.2",
@@ -22,9 +27,11 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "electron": "electron ./public/electron.js",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "package": "electron-builder"
   },
   "eslintConfig": {
     "extends": [
@@ -47,7 +54,36 @@
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.0-placeholder-for-preset-env.2",
     "autoprefixer": "^10.4.20",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14"
+  },
+  "build": {
+    "appId": "com.kioscorp.kiosk",
+    "productName": "KiosCorp Kiosk",
+    "files": [
+      "build/**/*",
+      "public/electron.js",
+      "kioscorp-icon.png"
+    ],
+    "win": {
+      "icon": "kioscorp-icon.ico",
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "armv7l",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "Utility"
+    }
   }
 }
