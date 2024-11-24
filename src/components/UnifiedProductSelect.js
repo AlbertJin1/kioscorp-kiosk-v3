@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaTimes } from 'react-icons/fa';
 import { IoMdCart } from 'react-icons/io';
+import { useSwipeable } from 'react-swipeable';
 import CartModal from './CartModal';
-import Swal from 'sweetalert2'; // Import SweetAlert2
 import { useNavigate } from 'react-router-dom';
 
-const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, sortOption, setIsCartOpen, inStockOnly }) => {
+const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, sortOption, setIsCartOpen, inStockOnly, currentPage, setCurrentPage }) => {
     const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [mainCategories, setMainCategories] = useState([]);
     const [subCategories, setSubCategories] = useState([]);
     const [selectedMainCategory, setSelectedMainCategory] = useState(null);
     const [selectedSubCategory, setSelectedSubCategory] = useState(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const productsPerPage = 9;
+    const productsPerPage = 6
     const [currentSubCategoryPage, setCurrentSubCategoryPage] = useState(1);
     const subCategoriesPerPage = 5;
+
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -115,18 +117,19 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
     // Reset pagination when inStockOnly is toggled
     useEffect(() => {
         setCurrentPage(1);
-    }, [inStockOnly]);
+    }, [setCurrentPage, inStockOnly]); // Add setCurrentPage
+
 
     // Reset pagination when the main category changes
     useEffect(() => {
         setCurrentPage(1);
         setCurrentSubCategoryPage(1); // Reset subcategory page only when main category changes
-    }, [selectedMainCategory]);
+    }, [setCurrentPage, selectedMainCategory]);
 
     // Reset pagination when the subcategory changes
     useEffect(() => {
         setCurrentPage(1); // Reset product page when subcategory changes
-    }, [selectedSubCategory]);
+    }, [setCurrentPage, selectedSubCategory]);
 
     // Add a new useEffect to manage subcategory page changes
     useEffect(() => {
@@ -154,20 +157,21 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
     const totalPages = Math.ceil(sortedProducts.length / productsPerPage);
     const currentProducts = sortedProducts.slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage);
 
+    const handlers = useSwipeable({
+        onSwipedLeft: () => setCurrentPage((prev) => Math.min(prev + 1, totalPages)),
+        onSwipedRight: () => setCurrentPage((prev) => Math.max(prev - 1, 1)),
+        onSwipedUp: () => setCurrentPage((prev) => Math.min(prev + 1, totalPages)),
+        onSwipedDown: () => setCurrentPage((prev) => Math.max(prev - 1, 1)),
+        preventDefaultTouchmoveEvent: true,
+        trackMouse: true,
+    });
+
     const handleAddToCart = (product) => {
         const existingProduct = cart.find(item => item.product_id === product.product_id);
         const currentQuantityInCart = existingProduct ? existingProduct.quantity : 0;
 
         // Check if adding one more would exceed the available stock
         if (currentQuantityInCart + 1 > product.product_quantity) {
-            Swal.fire({
-                position: 'top-end',
-                icon: 'error',
-                title: 'Cannot add more than available stock',
-                showConfirmButton: false,
-                timer: 1500,
-                backdrop: false
-            });
             return; // Exit the function if stock limit is reached
         }
 
@@ -180,16 +184,6 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
             // If the product is not in the cart, add it
             setCart(prevCart => [...prevCart, { ...product, quantity: 1 }]);
         }
-
-        // Show success message
-        Swal.fire({
-            position: 'top-end',
-            icon: 'success',
-            title: 'Item added to cart',
-            showConfirmButton: false,
-            timer: 1500,
-            backdrop: false
-        });
     };
 
     // Sort the subCategories alphabetically (A-Z)
@@ -203,12 +197,89 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
         currentSubCategoryPage * subCategoriesPerPage
     );
 
+    const handleProductClick = (product) => {
+        setSelectedProduct(product);
+        setIsProductModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsProductModalOpen(false);
+        setSelectedProduct(null);
+    };
+
+    // Product Modal JSX
+    const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
+        if (!isOpen || !product) return null;
+
+        const handleBackdropClick = (event) => {
+            if (event.target === event.currentTarget) {
+                onClose();
+            }
+        };
+
+        return (
+            <div
+                className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
+                onClick={handleBackdropClick}
+            >
+                <div className="bg-white rounded-lg p-4 w-1/2">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-4xl font-bold">View Product</h2>
+                        <button className="text-white bg-red-500 rounded-lg p-1" onClick={onClose}>
+                            <FaTimes size={40} />
+                        </button>
+                    </div>
+
+                    <div className="flex">
+                        <div className="w-1/2">
+                            <img
+                                src={product.product_image ? `http://192.168.254.101:8000${product.product_image}` : "https://via.placeholder.com/150"}
+                                alt={product.product_name}
+                                className="w-full h-auto object-cover border-2 border-black rounded-md"
+                            />
+                        </div>
+                        <div className="w-px bg-gray-300 mx-4"></div>
+                        <div className="flex flex-col justify-between h-full w-1/2">
+                            <div className="flex-grow space-y-2">
+                                <h2 className="text-3xl font-bold">{product.product_name}</h2>
+                                <p className="text-2xl"><strong>Brand:</strong> {product.product_brand}</p>
+                                <p className="text-2xl"><strong>Color:</strong> {product.product_color}</p>
+                                <p className="text-2xl"><strong>Size:</strong> {product.product_size}</p>
+                                <p className="text-2xl">
+                                    <strong>Availability:</strong>
+                                    <span className={product.product_quantity > 0 ? 'text-green-500 font-semibold' : 'text-red-500 font-semibold'}>
+                                        {product.product_quantity > 0 ? ' In Stock' : ' Out of Stock'}
+                                    </span>
+                                </p>
+                            </div>
+                            <div className="flex flex-col items-center mt-6">
+                                <p className="text-5xl font-bold">₱{product.product_price}</p>
+                                <button
+                                    onClick={() => {
+                                        if (product.product_quantity > 0) {
+                                            onAddToCart(product); // Call the passed function to add the product to the cart
+                                            onClose(); // Optionally close the modal after adding to cart
+                                        }
+                                    }}
+                                    className={`mt-4 text-3xl font-bold h-20 w-full p-2 rounded ${product.product_quantity > 0 ? 'bg-blue-500 text-white hover:bg-blue-700' : 'bg-gray-400 text-gray-700 cursor-not-allowed'}`}
+                                    disabled={product.product_quantity === 0}
+                                >
+                                    {product.product_quantity > 0 ? 'Add to Cart' : 'Out of Stock'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div >
+        );
+    };
+
     return (
         <div className="flex flex-row flex-grow h-full select-none">
             <div className="w-1/5 p-4 bg-gray-200 rounded-lg h-full flex flex-col">
                 {/* Add cart icon below subcategories */}
                 <div className="flex flex-col">
-                    <div className="relative cursor-pointer flex items-center space-x-2 p-2 h-20 bg-blue-600 hover:bg-blue-700 rounded transition duration-300" onClick={() => setIsCartOpen(true)}>
+                    <div className="relative cursor-pointer flex items-center space-x-2 p-2 bg-blue-600 hover:bg-blue-700 rounded transition duration-300" onClick={() => setIsCartOpen(true)}>
                         <IoMdCart size={50} className="text-yellow-400" />
                         <span className="text-4xl font-bold text-white flex items-center">
                             Cart
@@ -219,10 +290,10 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                             )}
                         </span>
                     </div>
-                </div>
+                </div >
 
                 {/* Cart Modal */}
-                <CartModal
+                < CartModal
                     isCartOpen={isCartOpen}
                     setIsCartOpen={setIsCartOpen}
                     cart={cart}
@@ -247,7 +318,6 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                 <div className="mt-4">
                     <h4 className="text-2xl font-bold mb-4 text-left">Main Categories</h4>
                     <ul>
-
                         {mainCategories.map((category) => (
                             <li key={category.main_category_id} className="w-full">
                                 <button
@@ -268,31 +338,31 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                         ))}
                     </ul>
                 </div>
-                <div className="mt-4">
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center">
-                            <button
-                                onClick={() => setCurrentSubCategoryPage(prev => Math.max(prev - 1, 1))}
-                                disabled={currentSubCategoryPage === 1 || paginatedSubCategories.length === 0}
-                                className={`px-4 py-2 rounded-l text-2xl font-bold transition duration-300 ${currentSubCategoryPage === 1 || paginatedSubCategories.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
-                            >
-                                Prev
-                            </button>
-                            <button
-                                onClick={() => setCurrentSubCategoryPage(prev => Math.min(prev + 1, Math.ceil(subCategories.length / subCategoriesPerPage)))}
-                                disabled={currentSubCategoryPage === Math.ceil(subCategories.length / subCategoriesPerPage) || paginatedSubCategories.length === 0}
-                                className={`px-4 py-2 rounded-r text-2xl font-bold transition duration-300 ${currentSubCategoryPage === Math.ceil(subCategories.length / subCategoriesPerPage) || paginatedSubCategories.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
-                            >
-                                Next
-                            </button>
-                        </div>
-                        <span className="mx-2 text-2xl font-bold text-gray-600">
-                            {paginatedSubCategories.length === 0 ? '0 / 0' : `${currentSubCategoryPage} / ${Math.ceil(subCategories.length / subCategoriesPerPage)}`}
-                        </span>
-                    </div>
-                </div>
                 <div className="mt-4 flex-grow">
                     <h4 className="text-2xl font-bold mb-4 text-left">Sub Categories</h4>
+                    <div className="mb-4">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center">
+                                <button
+                                    onClick={() => setCurrentSubCategoryPage(prev => Math.max(prev - 1, 1))}
+                                    disabled={currentSubCategoryPage === 1 || paginatedSubCategories.length === 0}
+                                    className={`px-4 py-2 rounded-l text-2xl font-bold transition duration-300 ${currentSubCategoryPage === 1 || paginatedSubCategories.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
+                                >
+                                    Prev
+                                </button>
+                                <button
+                                    onClick={() => setCurrentSubCategoryPage(prev => Math.min(prev + 1, Math.ceil(subCategories.length / subCategoriesPerPage)))}
+                                    disabled={currentSubCategoryPage === Math.ceil(subCategories.length / subCategoriesPerPage) || paginatedSubCategories.length === 0}
+                                    className={`px-4 py-2 rounded-r text-2xl font-bold transition duration-300 ${currentSubCategoryPage === Math.ceil(subCategories.length / subCategoriesPerPage) || paginatedSubCategories.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                            <span className="mx-2 text-2xl font-bold text-gray-600">
+                                {paginatedSubCategories.length === 0 ? '0 / 0' : `${currentSubCategoryPage} / ${Math.ceil(subCategories.length / subCategoriesPerPage)}`}
+                            </span>
+                        </div>
+                    </div>
                     <ul>
                         {paginatedSubCategories.map((subCategory) => (
                             <li key={subCategory.sub_category_id} className="w-full">
@@ -314,23 +384,31 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                         ))}
                     </ul>
                 </div>
-            </div>
+            </div >
 
             <div className="flex flex-col h-full flex-grow w-1/2 pl-4">
-                <div className="flex-grow"> {/* This div will allow the product list to grow */}
-                    <div className="grid grid-cols-3 gap-6">
-                        {currentProducts.length === 0 ? (
-                            <p className="col-span-3 text-center font-bold text-4xl text-red-500">No products found.</p>
-                        ) : (
-                            currentProducts.map((product) => (
-                                <div key={product.product_id} className={`flex p-6 shadow-md text-center rounded-lg relative
+                <div className="flex flex-col min-h-full">
+                    {/* Product List Section */}
+                    <div className="flex-grow">
+                        <div {...handlers} className="grid grid-cols-3 gap-4">
+                            {currentProducts.length === 0 ? (
+                                <p className="col-span-3 text-center font-bold text-4xl text-red-500">
+                                    No products found.
+                                </p>
+                            ) : (
+                                // Inside the map function for currentProducts
+                                currentProducts.map((product) => (
+                                    <div
+                                        key={product.product_id}
+                                        className={`flex flex-col justify-between items-center p-4 shadow-md rounded-lg relative 
                         ${product.product_quantity === 0 ? 'bg-gray-300 border-2 border-red-500' :
-                                        cart.some(item => item.product_id === product.product_id) ? 'bg-green-100 border-2 border-green-500' : 'bg-white'}`}>
-
-                                    {/* Flex container for image and details */}
-                                    <div className="flex min-h-full flex-grow flex-row w-full">
-                                        <div className="flex-shrink-0 relative">
-                                            {/* Overlay for "In Cart" message */}
+                                                cart.some(item => item.product_id === product.product_id) ? 'bg-green-100 border-2 border-green-500' :
+                                                    'bg-white'} 
+                        ${selectedProduct && selectedProduct.product_id === product.product_id ? 'border-2 border-blue-500' : ''}`} // Add selected styling here
+                                        onClick={() => handleProductClick(product)} // Handle product click for showing modal
+                                    >
+                                        {/* Product Image */}
+                                        <div className="relative">
                                             {cart.some(item => item.product_id === product.product_id) && (
                                                 <div className="absolute top-2 left-2 bg-green-500 text-white rounded-full px-2 py-1 text-md font-bold">
                                                     In Cart
@@ -339,86 +417,127 @@ const UnifiedProductSelect = ({ token, cart, setCart, isCartOpen, searchQuery, s
                                             <img
                                                 src={product.product_image ? `http://192.168.254.101:8000${product.product_image}` : "https://via.placeholder.com/150"}
                                                 alt={product.product_name}
-                                                className="w-52 h-52 object-cover border-2 border-black rounded-md"
+                                                className="w-36 h-36 object-cover border-2 border-black rounded-md"
                                                 onError={(e) => {
                                                     e.target.onerror = null; // Prevents looping
                                                     e.target.src = "https://via.placeholder.com/150"; // Placeholder image
                                                 }}
                                             />
                                         </div>
-                                        <div className="flex-grow flex flex-col justify-between ml-6">
-                                            <div>
-                                                <h3 className={`text-2xl font-bold ${product.product_quantity === 0 ? 'text-gray-500' : 'text-black'}`}>{product.product_name}</h3>
-                                                <p className={`font-semibold text-xl ${product.product_quantity === 0 ? 'text-gray-400' : 'text-gray-600'}`}>{product.product_color}</p>
-                                                <p className={`font-semibold text-xl ${product.product_quantity === 0 ? 'text-gray-400' : 'text-gray-600'}`}>{product.product_size}</p>
-                                            </div>
-                                            <div>
-                                                <p className={`text-2xl font-bold ${product.product_quantity === 0 ? 'text-gray-500' : 'text-black'}`}>₱{product.product_price}</p>
 
-                                                <button
-                                                    onClick={product.product_quantity > 0 ? () => handleAddToCart(product) : null}
-                                                    className={`w-full transition duration-300 ${product.product_quantity === 0 ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'} text-2xl font-bold h-14 px-4 rounded mt-2`}
-                                                    disabled={product.product_quantity === 0} // Disable button if out of stock
-                                                >
-                                                    {product.product_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
-                                                </button>
-                                            </div>
+                                        {/* Product Info */}
+                                        <div className="mt-4 text-center flex-grow">
+                                            <h3 className={`text-xl font-bold ${product.product_quantity === 0 ? 'text-gray-500' : 'text-black'}`}>
+                                                {product.product_name}
+                                            </h3>
+                                            <p className={`font-semibold text-lg ${product.product_quantity === 0 ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                {product.product_color}
+                                            </p>
+                                            <p className={`font-semibold text-lg ${product.product_quantity === 0 ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                {product.product_size}
+                                            </p>
+                                            <p className={`text-2xl font-bold mt-2 ${product.product_quantity === 0 ? 'text-gray-500' : 'text-black'}`}>
+                                                ₱{product.product_price}
+                                            </p>
                                         </div>
+
+                                        {/* Add to Cart Button */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // Prevent the click from bubbling up to the product card
+                                                if (product.product_quantity > 0) {
+                                                    handleAddToCart(product);
+                                                }
+                                            }}
+                                            className={`w-full transition duration-300 mt-4 ${product.product_quantity === 0 ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'} text-2xl font-bold p-2 rounded`}
+                                            disabled={product.product_quantity === 0}
+                                        >
+                                            {product.product_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                                        </button>
+
+                                        {/* Overlay for "Out of Stock" message */}
+                                        {product.product_quantity === 0 && (
+                                            <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center text-white font-bold text-2xl rounded-md">
+                                                <span className="text-red-500">Out of Stock</span>
+                                            </div>
+                                        )}
                                     </div>
-
-                                    {/* Overlay for "Out of Stock" message */}
-                                    {product.product_quantity === 0 && (
-                                        <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center text-white font-bold text-2xl rounded-md">
-                                            <span className="text-red-500">Out of Stock</span>
-                                        </div>
-                                    )}
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-                {/* Pagination and product display logic */}
-                <div className="mt-4">
-                    <div className="flex items-center justify-between text-2xl font-bold">
-                        <button
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1 || totalPages === 0}
-                            className={`flex items-center px-4 py-2 rounded transition text-4xl duration-300 ${currentPage === 1 || totalPages === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
-                        >
-                            <FaChevronLeft size={50} />
-                            Prev
-                        </button>
-
-                        {/* Selectable Page Number Buttons */}
-                        <div className="flex justify-center ml-4">
-                            {Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
-                                const pageNum = Math.max(1, currentPage - 2) + index; // Start from currentPage - 2
-                                if (pageNum > totalPages) return null; // Avoid rendering pages beyond totalPages
-
-                                return (
-                                    <button
-                                        key={pageNum}
-                                        onClick={() => setCurrentPage(pageNum)}
-                                        className={`mx-2 px-4 py-2 rounded transition duration-300 ${currentPage === pageNum ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-blue-500 hover:text-white'}`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                );
-                            })}
+                                ))
+                            )}
                         </div>
+                    </div>
 
-                        <button
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage === totalPages || totalPages === 0}
-                            className={`flex items-center px-4 py-2 rounded transition text-4xl duration-300 ${currentPage === totalPages || totalPages === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
-                        >
-                            Next
-                            <FaChevronRight size={50} />
-                        </button>
+                    {/* Pagination Section */}
+                    <div className="mt-4">
+                        <div className="flex items-center justify-between text-2xl font-bold">
+                            <button
+                                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1 || totalPages === 0}
+                                className={`flex items-center px-4 py-2 rounded transition text-4xl duration-300 ${currentPage === 1 || totalPages === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
+                            >
+                                <FaChevronLeft size={50} />
+                                Prev
+                            </button>
+
+                            {/* Page Numbers */}
+                            <div className="flex justify-center ml-4">
+                                {/* Always show the first page button */}
+                                <button
+                                    onClick={() => setCurrentPage(1)}
+                                    className={`mx-2 px-4 py-2 rounded transition duration-300 ${currentPage === 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-blue-500 hover:text-white'}`}
+                                >
+                                    1
+                                </button>
+
+                                {/* Ellipsis if needed */}
+                                {currentPage > 3 && <span className="mx-2 text-gray-600">...</span>}
+
+                                {/* Range of pages */}
+                                {Array.from({ length: Math.min(3, totalPages) }, (_, index) => {
+                                    const pageNum = currentPage - 1 + index;
+                                    if (pageNum < 2 || pageNum >= totalPages) return null;
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => setCurrentPage(pageNum)}
+                                            className={`mx-2 px-4 py-2 rounded transition duration-300 ${currentPage === pageNum ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-blue-500 hover:text-white'}`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+
+                                {/* Ellipsis if needed */}
+                                {currentPage < totalPages - 2 && <span className="mx-2 text-gray-600">...</span>}
+
+                                {/* Last page button */}
+                                <button
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    className={`mx-2 px-4 py-2 rounded transition duration-300 ${currentPage === totalPages ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-blue-500 hover:text-white'}`}
+                                >
+                                    {totalPages}
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages || totalPages === 0}
+                                className={`flex items-center px-4 py-2 rounded transition text-4xl duration-300 ${currentPage === totalPages || totalPages === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-700'}`}
+                            >
+                                Next
+                                <FaChevronRight size={50} />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+            <ProductModal
+                product={selectedProduct}
+                isOpen={isProductModalOpen}
+                onClose={handleCloseModal}
+                onAddToCart={handleAddToCart} // Pass the handleAddToCart function
+            />
+        </div >
     );
 };
 

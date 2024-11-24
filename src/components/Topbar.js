@@ -5,7 +5,7 @@ import Fuse from 'fuse.js';
 import CustomSelect from './CustomSelect';
 import OnScreenKeyboard from './OnScreenKeyboard';
 
-const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products, token, inStockOnly, setInStockOnly, inactivityTime }) => {
+const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products, token, inStockOnly, setInStockOnly, inactivityTime, setCurrentPage }) => {
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [showKeyboard, setShowKeyboard] = useState(false);
@@ -57,6 +57,7 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
         setSearchTerm(value);
         setShowSuggestions(value.length > 0);
         fetchSuggestions(value);
+        setCurrentPage(1); // Reset to page 1 when searching
     };
 
     const highlightMatch = (text, term) => {
@@ -175,6 +176,7 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
                                     className="p-2 hover:bg-gray-200 cursor-pointer text-4xl"
                                 >
                                     {highlightMatch(suggestion.product_name, searchTerm)}
+                                    <span className="text-gray-600"> ({suggestion.product_color}, {suggestion.product_size})</span>
                                 </li>
                             ))}
                         </ul>

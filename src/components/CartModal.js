@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { IoMdRemoveCircleOutline, IoMdAddCircleOutline } from 'react-icons/io';
 import { FaTimes } from 'react-icons/fa';
-import Swal from 'sweetalert2';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import './CartModal.css';
 
 const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }) => {
@@ -24,7 +24,7 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
     }, [modalRef, setIsCartOpen]);
 
     const calculateTotal = () => {
-        return cart.reduce((total, item) => total + item.product_price * item.quantity, 0);
+        return cart.reduce((total, item) => total + (parseFloat(item.product_price) * item.quantity), 0).toFixed(2); // Float total with 2 decimal places
     };
 
     const handleUpdateQuantity = (productId, newQuantity) => {
@@ -36,14 +36,8 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
             if (newQuantity <= 0) {
                 handleRemoveFromCart(productId);
             } else if (newQuantity > existingProduct.product_quantity) {
-                Swal.fire({
-                    position: 'top-end',
-                    icon: 'error',
-                    title: 'Cannot exceed available stock',
-                    showConfirmButton: false,
-                    timer: 1500,
-                    backdrop: false
-                });
+                // No Swal here, just a simple return as per your request
+                return;
             } else {
                 setCart(prevCart => prevCart.map(item =>
                     item.product_id === productId ? { ...item, quantity: newQuantity } : item
@@ -60,19 +54,6 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
     const handleRemoveFromCart = (productId) => {
         setCart(prevCart => {
             const updatedCart = prevCart.filter(item => item.product_id !== productId);
-
-            // Show SweetAlert2 notification after removing the item
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Product removed from cart.',
-                showConfirmButton: false,
-                timer: 2000,
-                timerProgressBar: true,
-                backdrop: false,
-            });
-
             return updatedCart;
         });
     };
@@ -83,6 +64,7 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
 
         try {
             if (cart.length === 0) {
+                // SweetAlert2 still used here as per your request
                 Swal.fire({
                     toast: true,
                     position: 'top-end',
@@ -172,7 +154,6 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
         }
     };
 
-
     return (
         isCartOpen && (
             <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50">
@@ -223,7 +204,7 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                                             </div>
                                             <div className="flex items-center justify-center w-1/3">
                                                 <button onClick={() => handleUpdateQuantity(item.product_id, item.quantity - 1)}>
-                                                    <IoMdRemoveCircleOutline className="text-5xl text-red-500 hover:text-red-700" />
+                                                    <IoMdRemoveCircleOutline size={70} className="text-red-500 hover:text-red-700" />
                                                 </button>
                                                 <input
                                                     type="number"
@@ -241,19 +222,21 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                                                         handleUpdateQuantity(item.product_id, parsedQuantity);
                                                     }}
                                                     min="1"
-                                                    className="w-16 font-bold text-2xl text-center border-2 border-gray-300 rounded p-2 mx-2 focus:outline-none focus:border-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]: appearance-none [&::-webkit-inner-spin-button ]:appearance-none"
+                                                    className="w-16 font-bold text-2xl text-center border-2 border-gray-300 rounded p-2 mx-2 focus:outline-none focus:border-blue-500 appearance-none -moz-appearance-none -webkit-appearance-none"
                                                 />
                                                 <button onClick={() => handleUpdateQuantity(item.product_id, item.quantity + 1)}>
-                                                    <IoMdAddCircleOutline className="text-5xl text-green-500 hover:text-green-700" />
+                                                    <IoMdAddCircleOutline size={70} className="text-green-500 hover:text-green-700" />
                                                 </button>
                                             </div>
-                                            <span className="text-3xl font-bold w-1/4 text-right mr-4">₱{item.product_price}</span>
+                                            <span className="w-1/4 text-right mr-10 text-3xl font-bold">
+                                                ₱{(parseFloat(item.product_price) * item.quantity).toFixed(2)}
+                                            </span>
                                         </div>
-                                        <hr className="border-gray-300" /> {/* Separator line */}
+                                        <hr className="border-gray-300" />
                                     </div>
                                 ))}
                             </div>
-                            <hr className="border-gray-300 mb-4" />
+
                             {/* Footer with Close, Total, and Print */}
                             <div className="flex justify-between items-center mt-4">
                                 <button
@@ -264,7 +247,7 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                                 </button>
                                 <div className="flex justify-center items-center">
                                     <span className="text-4xl font-bold mr-4">Total:</span>
-                                    <span className="text-6xl font-bold">₱{calculateTotal().toLocaleString()}</span>
+                                    <span className="text-6xl font-bold">₱{calculateTotal()}</span>
                                 </div>
                                 <button
                                     onClick={handlePrint}

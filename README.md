@@ -80,3 +80,4 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/t
 - npm install axios
 - npm install @fortawesome/react-fontawesome @fortawesome/free-solid-svg-icons
 - npm install fuse.js
+- npm install react-swipeable

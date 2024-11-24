@@ -4,7 +4,6 @@ import Topbar from './Topbar';
 import UnifiedProductSelect from './UnifiedProductSelect';
 import Feedback from './Feedback';
 import Loader from './Loader';
-import Swal from 'sweetalert2';
 
 import screensaver1 from '../img/Screensaver/screensaver1.png';
 import screensaver2 from '../img/Screensaver/screensaver2.png';
@@ -24,6 +23,7 @@ const MainComponent = () => {
     const [inStockOnly, setInStockOnly] = useState(false);
     const [inactivityTime, setInactivityTime] = useState(90);
     const location = useLocation();
+    const [currentPage, setCurrentPage] = useState(1);
 
     const hasReloaded = useRef(false); // Declare useRef at the top level
 
@@ -70,6 +70,7 @@ const MainComponent = () => {
         setSortOption('name-asc');
         setInStockOnly(false);
         setCart([]);
+        setCurrentPage(1); // Reset current page when filters are reset
     };
 
     useEffect(() => {
@@ -90,14 +91,7 @@ const MainComponent = () => {
                 setToken(loginData.token);
                 localStorage.setItem('token', loginData.token);
 
-                Swal.fire({
-                    position: 'top-end',
-                    icon: 'success',
-                    title: 'Login successful!',
-                    showConfirmButton: false,
-                    timer: 1500,
-                    backdrop: false,
-                });
+                // Removed Swal notification here
 
                 const productsResponse = await fetch('http://192.168.254.101:8000/api/products/', {
                     headers: {
@@ -207,6 +201,7 @@ const MainComponent = () => {
                             inStockOnly={inStockOnly}
                             setInStockOnly={setInStockOnly}
                             inactivityTime={inactivityTime}
+                            setCurrentPage={setCurrentPage}
                         />
                     )}
                     <div className={`flex-grow overflow-y-auto ${location.pathname === '/feedback' ? '' : 'p-4'}`}>
@@ -225,6 +220,8 @@ const MainComponent = () => {
                                         products={products}
                                         setProducts={setProducts}
                                         inStockOnly={inStockOnly}
+                                        currentPage={currentPage}
+                                        setCurrentPage={setCurrentPage}
                                     />
                                 }
                             />
