@@ -75,6 +75,7 @@
       ]
     },
     "linux": {
+      "icon": "kioscorp-icon.png",
       "target": [
         {
           "target": "deb",
