@@ -19,7 +19,12 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
                 const matchesInStock = inStockOnly ? product.product_quantity > 0 : true; // Check stock condition
                 return matchesSearchTerm && matchesInStock;
             });
-            setSuggestions(filteredSuggestions);
+
+            // Create a Set to store unique product names
+            const uniqueSuggestions = Array.from(new Set(filteredSuggestions.map(product => product.product_name)))
+                .map(name => filteredSuggestions.find(product => product.product_name === name));
+
+            setSuggestions(uniqueSuggestions);
         } else {
             setSuggestions([]);
         }
@@ -46,7 +51,12 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
 
             const result = fuse.search(term);
             const orderedSuggestions = result.map((item) => item.item); // Map results to the item objects
-            setSuggestions(orderedSuggestions); // Set multiple close matches, with the closest at the top
+
+            // Create a Set to store unique product names
+            const uniqueSuggestions = Array.from(new Set(orderedSuggestions.map(product => product.product_name)))
+                .map(name => orderedSuggestions.find(product => product.product_name === name));
+
+            setSuggestions(uniqueSuggestions); // Set multiple close matches, with the closest at the top
         } catch (error) {
             console.error('Error fetching suggestions:', error);
         }
@@ -100,7 +110,7 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
     }, []);
 
     const handleKeyPress = (key) => {
-        if (key === 'Backspace') {
+        if (key === 'Back space') {
             setSearchTerm(prev => prev.slice(0, -1)); // Remove last character
         } else if (key === 'Space') {
             setSearchTerm(prev => prev + ' '); // Add space
@@ -176,7 +186,6 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
                                     className="p-2 hover:bg-gray-200 cursor-pointer text-4xl"
                                 >
                                     {highlightMatch(suggestion.product_name, searchTerm)}
-                                    <span className="text-gray-600"> ({suggestion.product_color}, {suggestion.product_size})</span>
                                 </li>
                             ))}
                         </ul>
