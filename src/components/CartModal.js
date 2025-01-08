@@ -104,7 +104,7 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
             });
 
             // Send the request to the server
-            const response = await axios.post('http://192.168.254.101:8000/api/print-receipt/', printData, {
+            const response = await axios.post('http://localhost:8000/api/print-receipt/', printData, {
                 headers: {
                     'Authorization': `Token ${token}`,
                     'Content-Type': 'application/json'
@@ -187,7 +187,7 @@ const CartModal = ({ isCartOpen, setIsCartOpen, cart, setCart, token, navigate }
                                             <div className="w-1/6 flex justify-center">
                                                 <img
                                                     src={item.product_image
-                                                        ? `http://192.168.254.101:8000${item.product_image}`
+                                                        ? `http://localhost:8000${item.product_image}`
                                                         : "https://via.placeholder.com/150"
                                                     }
                                                     alt={item.product_name}

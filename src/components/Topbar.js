@@ -37,7 +37,7 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
         }
 
         try {
-            const response = await axios.get('http://192.168.254.101:8000/api/products/', {
+            const response = await axios.get('http://localhost:8000/api/products/', {
                 headers: {
                     'Authorization': `Token ${token}`,
                 },
@@ -110,7 +110,7 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
     }, []);
 
     const handleKeyPress = (key) => {
-        if (key === 'Back space') {
+        if (key === 'Backspace') {
             setSearchTerm(prev => prev.slice(0, -1)); // Remove last character
         } else if (key === 'Space') {
             setSearchTerm(prev => prev + ' '); // Add space
@@ -170,7 +170,7 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
                             setShowKeyboard(true); // Show keyboard on focus
                         }}
                         placeholder="Search products..."
-                        className="w-full p-4 rounded-lg text-3xl font-bold border border-gray-300 shadow uppercase pr-16"
+                        className="w-full p-4 rounded-lg text-3xl font-bold border border-gray-300 shadow pr-16" // Removed 'uppercase'
                     />
                     {searchTerm && (
                         <button onClick={clearSearch} className="absolute right-4 top-1/2 transform -translate-y-1/2">
@@ -185,12 +185,14 @@ const Topbar = ({ searchTerm, setSearchTerm, sortOption, setSortOption, products
                                     onClick={() => handleSuggestionClick(suggestion)}
                                     className="p-2 hover:bg-gray-200 cursor-pointer text-4xl"
                                 >
+                                    {/* Make sure to handle case-insensitive matching */}
                                     {highlightMatch(suggestion.product_name, searchTerm)}
                                 </li>
                             ))}
                         </ul>
                     )}
                 </div>
+
             </div>
             {showKeyboard && (
                 <div ref={keyboardRef}> {/* Attach the ref to the keyboard div */}

@@ -32,7 +32,7 @@ const MainComponent = () => {
 
         const checkBackendHealth = async () => {
             try {
-                const response = await fetch('http://192.168.254.101:8000/api/ping/', {
+                const response = await fetch('http://localhost:8000/api/ping/', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -76,7 +76,7 @@ const MainComponent = () => {
     useEffect(() => {
         const loginAndFetchData = async () => {
             try {
-                const loginResponse = await fetch('http://192.168.254.101:8000/api/login/', {
+                const loginResponse = await fetch('http://localhost:8000/api/login/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -93,7 +93,7 @@ const MainComponent = () => {
 
                 // Removed Swal notification here
 
-                const productsResponse = await fetch('http://192.168.254.101:8000/api/products/', {
+                const productsResponse = await fetch('http://localhost:8000/api/products/', {
                     headers: {
                         'Authorization': `Token ${loginData.token}`,
                     },

@@ -29,7 +29,7 @@ const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
                     {/* Image Section */}
                     <div className="w-1/2">
                         <img
-                            src={product.product_image ? `http://192.168.254.101:8000${product.product_image}` : "https://via.placeholder.com/150"}
+                            src={product.product_image ? `http://localhost:8000${product.product_image}` : "https://via.placeholder.com/150"}
                             alt={product.product_name}
                             className="w-full h-auto object-cover border-2 border-black rounded-md"
                         />
